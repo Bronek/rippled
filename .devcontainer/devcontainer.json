@@ -1,0 +1,62 @@
+{
+    "name": "Ubuntu 22.04",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "args": {
+            /*
+            By default, GID and UID are only visible to shell and not exported.
+            You need to add `export GID; export UID` somewhere, e.g. ~/.profile
+
+            PS. devcontainer.json is mapped to JSONC - hooray for comments!
+            */
+            "DIST_TAG": "22.04",
+            "USER_UID": "${localEnv:UID}",
+            "USER_GID": "${localEnv:GID}",
+            "USER_NAME": "${localEnv:USER}",
+            "WORKSPACE": "${localWorkspaceFolder}"
+        }
+    },
+    "containerUser": "${localEnv:USER}",
+    "init": true,
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "llvm-vs-code-extensions.vscode-clangd",
+                "xaver.clang-format",
+                "ms-vscode.cpptools-themes",
+                "eamodio.gitlens",
+                "GitHub.vscode-pull-request-github",
+                "jeff-hykin.better-cpp-syntax",
+                "ajshort.include-autocomplete",
+                "streetsidesoftware.code-spell-checker",
+                "streetsidesoftware.code-spell-checker-british-english"
+            ]
+        }
+    },
+    /*
+    This allows the `compile_commands.json` to be shared by both host and container
+    */
+    "workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind,consistency=cached",
+    "workspaceFolder": "${localWorkspaceFolder}",
+    "mounts": [
+        {
+            "source": "/tmp",
+            "target": "/tmp",
+            "type": "bind"
+        },
+        {
+            /*
+            This allows sharing conan data between containers
+            */
+            "source": "conan_data",
+            "target": "/home/${localEnv:USER}/.conan",
+            "type": "volume"
+        }
+    ],
+    "capAdd": [
+        "SYS_PTRACE"
+    ],
+    "securityOpt": [
+        "seccomp=unconfined"
+    ]
+}

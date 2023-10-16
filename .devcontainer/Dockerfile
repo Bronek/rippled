@@ -40,7 +40,8 @@ ENV VISUAL=vim
 RUN pip install 'conan<2' ;\
     conan profile new default --detect ;\
     conan profile update settings.compiler.cppstd=20 default ;\
-    conan profile update settings.compiler.libcxx=libstdc++11 default
+    conan profile update settings.compiler.libcxx=libstdc++11 default ;\
+    conan profile update 'conf.tools.build:compiler_executables={"c": "/usr/lib/llvm-15/bin/clang", "cpp": "/usr/lib/llvm-15/bin/clang++"}' default
 
 RUN echo "mkdir .build" > TODO.txt ;\
     echo "ln -s .build/compile_commands.json compile_commands.json" >> TODO.txt ;\

@@ -21,16 +21,18 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "llvm-vs-code-extensions.vscode-clangd",
-                "xaver.clang-format",
-                "ms-vscode.cpptools-themes",
-                "eamodio.gitlens",
-                "GitHub.vscode-pull-request-github",
-                "jeff-hykin.better-cpp-syntax",
-                "ajshort.include-autocomplete",
-                "streetsidesoftware.code-spell-checker",
-                "streetsidesoftware.code-spell-checker-british-english"
-            ]
+				"llvm-vs-code-extensions.vscode-clangd",
+				"xaver.clang-format",
+				"ms-vscode.cpptools-themes",
+				"eamodio.gitlens",
+				"GitHub.vscode-pull-request-github",
+				"jeff-hykin.better-cpp-syntax",
+				"ajshort.include-autocomplete",
+				"ms-azuretools.vscode-docker",
+				"DavidAnson.vscode-markdownlint",
+				"GitHub.remotehub",
+				"GitHub.github-vscode-theme"
+			]
         }
     },
     /*
@@ -60,3 +62,10 @@
         "seccomp=unconfined"
     ]
 }
+/*
+
+Useful command:
+
+sed "s|system /home/bronekk/.conan/data/boost/1.82.0/_/_/package/046b9b54105d2c5749606e2948966717e945c6f4/include -i|system /home/bronekk/.conan/data/boost/1.82.0/_/_/package/046b9b54105d2c5749606e2948966717e945c6f4/include -isystem /home/bronekk/.conan/data/abseil/20220623.0/_/_/package/aac12bbbdda217641cecc450b6eeebe8c3725117/include -isystem /home/bronekk/.conan/data/bzip2/1.0.8/_/_/package/c32092bf4d4bb47cf962af898e02823f499b017e/include -isystem /home/bronekk/.conan/data/c-ares/1.19.0/_/_/package/568a9f05046bc2a125b25bb11b7b1b0ed567b825/include -isystem /home/bronekk/.conan/data/date/3.0.1/_/_/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include -isystem /home/bronekk/.conan/data/grpc/1.50.1/_/_/package/3209e1b6a68fd4a38eed016a2e6aca89fde41579/include -isystem /home/bronekk/.conan/data/libarchive/3.6.2/_/_/package/efa3fa8ad634e9a89f7527415ea9eb2f81c76855/include -isystem /home/bronekk/.conan/data/libbacktrace/cci.20210118/_/_/package/dfbe50feef7f3c6223a476cd5aeadb687084a646/include -isystem /home/bronekk/.conan/data/lz4/1.9.3/_/_/package/dfbe50feef7f3c6223a476cd5aeadb687084a646/include -isystem /home/bronekk/.conan/data/nudb/2.0.8/_/_/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include -isystem /home/bronekk/.conan/data/openssl/1.1.1u/_/_/package/dfbe50feef7f3c6223a476cd5aeadb687084a646/include -isystem /home/bronekk/.conan/data/protobuf/3.21.9/_/_/package/fa77de833f0d87361aaba5ee3ef788e8adac74c5/include -isystem /home/bronekk/.conan/data/re2/20230301/_/_/package/db694a2ea4d0e98ab4d97f90c9f8e3b2a491629f/include -isystem /home/bronekk/.conan/data/rocksdb/6.29.5/_/_/package/c3153bca2458fea7236349be4c2353545ef6385f/include -isystem /home/bronekk/.conan/data/snappy/1.1.10/_/_/package/e887de3fedd65e586627dd1d8dd36d1d5557df27/include -isystem /home/bronekk/.conan/data/soci/4.0.3/_/_/package/e36423293cadd2b31097aec1d6bec7442146f2d7/include -isystem /home/bronekk/.conan/data/sqlite3/3.42.0/_/_/package/8fc930bdbf940331d9f322f454eac3dd06fd27e8/include -isystem /home/bronekk/.conan/data/zlib/1.2.13/_/_/package/dfbe50feef7f3c6223a476cd5aeadb687084a646/include -i|" -i compile_commands.json
+
+*/

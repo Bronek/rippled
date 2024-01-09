@@ -33,7 +33,7 @@ private:
     // requires 64-bit std::size_t
     static_assert(sizeof(std::size_t) == 8, "");
 
-    detail::XRPL_XXH64_state_t state_;
+    detail::XXH64_state_t state_;
 
 public:
     using result_type = std::size_t;
@@ -42,7 +42,7 @@ public:
 
     xxhasher() noexcept
     {
-        detail::XRPL_XXH64_reset(&state_, 1);
+        detail::XXH64_reset(&state_, 1);
     }
 
     template <
@@ -50,7 +50,7 @@ public:
         std::enable_if_t<std::is_unsigned<Seed>::value>* = nullptr>
     explicit xxhasher(Seed seed)
     {
-        detail::XRPL_XXH64_reset(&state_, seed);
+        detail::XXH64_reset(&state_, seed);
     }
 
     template <
@@ -58,18 +58,18 @@ public:
         std::enable_if_t<std::is_unsigned<Seed>::value>* = nullptr>
     xxhasher(Seed seed, Seed)
     {
-        detail::XRPL_XXH64_reset(&state_, seed);
+        detail::XXH64_reset(&state_, seed);
     }
 
     void
     operator()(void const* key, std::size_t len) noexcept
     {
-        detail::XRPL_XXH64_update(&state_, key, len);
+        detail::XXH64_update(&state_, key, len);
     }
 
     explicit operator std::size_t() noexcept
     {
-        return detail::XRPL_XXH64_digest(&state_);
+        return detail::XXH64_digest(&state_);
     }
 };
 

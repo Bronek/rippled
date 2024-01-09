@@ -46,7 +46,7 @@
  *   - Classic 32-bit hash function. Simple, compact, and runs on almost all
  *     32-bit and 64-bit systems.
  * 2. @ref XRPL_XXH64_family
- *   - Classic 64-bit adaptation of XRPL_XXH32. Just as simple, and runs well on most
+ *   - Classic 64-bit adaptation of XXH32. Just as simple, and runs well on most
  *     64-bit systems (but _not_ 32-bit systems).
  * 3. @ref XRPL_XXH3_family
  *   - Modern 64-bit and 128-bit hash function family which features improved
@@ -60,23 +60,23 @@
  *
  * | Hash Name            | ISA ext | Width | Large Data Speed | Small Data Velocity |
  * | -------------------- | ------- | ----: | ---------------: | ------------------: |
- * | XRPL_XXH3_64bits()        | @b AVX2 |    64 |        59.4 GB/s |               133.1 |
+ * | XXH3_64bits()        | @b AVX2 |    64 |        59.4 GB/s |               133.1 |
  * | MeowHash             | AES-NI  |   128 |        58.2 GB/s |                52.5 |
- * | XRPL_XXH3_128bits()       | @b AVX2 |   128 |        57.9 GB/s |               118.1 |
+ * | XXH3_128bits()       | @b AVX2 |   128 |        57.9 GB/s |               118.1 |
  * | CLHash               | PCLMUL  |    64 |        37.1 GB/s |                58.1 |
- * | XRPL_XXH3_64bits()        | @b SSE2 |    64 |        31.5 GB/s |               133.1 |
- * | XRPL_XXH3_128bits()       | @b SSE2 |   128 |        29.6 GB/s |               118.1 |
+ * | XXH3_64bits()        | @b SSE2 |    64 |        31.5 GB/s |               133.1 |
+ * | XXH3_128bits()       | @b SSE2 |   128 |        29.6 GB/s |               118.1 |
  * | RAM sequential read  |         |   N/A |        28.0 GB/s |                 N/A |
  * | ahash                | AES-NI  |    64 |        22.5 GB/s |               107.2 |
  * | City64               |         |    64 |        22.0 GB/s |                76.6 |
  * | T1ha2                |         |    64 |        22.0 GB/s |                99.0 |
  * | City128              |         |   128 |        21.7 GB/s |                57.7 |
  * | FarmHash             | AES-NI  |    64 |        21.3 GB/s |                71.9 |
- * | XRPL_XXH64()              |         |    64 |        19.4 GB/s |                71.0 |
+ * | XXH64()              |         |    64 |        19.4 GB/s |                71.0 |
  * | SpookyHash           |         |    64 |        19.3 GB/s |                53.2 |
  * | Mum                  |         |    64 |        18.0 GB/s |                67.0 |
  * | CRC32C               | SSE4.2  |    32 |        13.0 GB/s |                57.9 |
- * | XRPL_XXH32()              |         |    32 |         9.7 GB/s |                71.9 |
+ * | XXH32()              |         |    32 |         9.7 GB/s |                71.9 |
  * | City32               |         |    32 |         9.1 GB/s |                66.0 |
  * | Blake3*              | @b AVX2 |   256 |         4.4 GB/s |                 8.1 |
  * | Murmur3              |         |    32 |         3.9 GB/s |                56.1 |
@@ -117,18 +117,18 @@
  * immediately returning the result. They are the easiest and usually the fastest
  * option.
  *
- * XRPL_XXH32(), XRPL_XXH64(), XRPL_XXH3_64bits(), XRPL_XXH3_128bits()
+ * XXH32(), XXH64(), XXH3_64bits(), XXH3_128bits()
  *
  * @code{.c}
  *   #include <string.h>
  *   #include "xxhash.h"
  *
- *   // Example for a function which hashes a null terminated string with XRPL_XXH32().
- *   XRPL_XXH32_hash_t hash_string(const char* string, XRPL_XXH32_hash_t seed)
+ *   // Example for a function which hashes a null terminated string with XXH32().
+ *   XXH32_hash_t hash_string(const char* string, XXH32_hash_t seed)
  *   {
  *       // NULL pointers are only valid if the length is zero
  *       size_t length = (string == NULL) ? 0 : strlen(string);
- *       return XRPL_XXH32(string, length, seed);
+ *       return XXH32(string, length, seed);
  *   }
  * @endcode
  *
@@ -138,31 +138,31 @@
  * These groups of functions allow incremental hashing of unknown size, even
  * more than what would fit in a size_t.
  *
- * XRPL_XXH32_reset(), XRPL_XXH64_reset(), XRPL_XXH3_64bits_reset(), XRPL_XXH3_128bits_reset()
+ * XXH32_reset(), XXH64_reset(), XXH3_64bits_reset(), XXH3_128bits_reset()
  *
  * @code{.c}
  *   #include <stdio.h>
  *   #include <assert.h>
  *   #include "xxhash.h"
- *   // Example for a function which hashes a FILE incrementally with XRPL_XXH3_64bits().
- *   XRPL_XXH64_hash_t hashFile(FILE* f)
+ *   // Example for a function which hashes a FILE incrementally with XXH3_64bits().
+ *   XXH64_hash_t hashFile(FILE* f)
  *   {
  *       // Allocate a state struct. Do not just use malloc() or new.
- *       XRPL_XXH3_state_t* state = XRPL_XXH3_createState();
+ *       XXH3_state_t* state = XXH3_createState();
  *       assert(state != NULL && "Out of memory!");
  *       // Reset the state to start a new hashing session.
- *       XRPL_XXH3_64bits_reset(state);
+ *       XXH3_64bits_reset(state);
  *       char buffer[4096];
  *       size_t count;
  *       // Read the file in chunks
  *       while ((count = fread(buffer, 1, sizeof(buffer), f)) != 0) {
  *           // Run update() as many times as necessary to process the data
- *           XRPL_XXH3_64bits_update(state, buffer, count);
+ *           XXH3_64bits_update(state, buffer, count);
  *       }
  *       // Retrieve the finalized hash. This will not change the state.
- *       XRPL_XXH64_hash_t result = XRPL_XXH3_64bits_digest(state);
+ *       XXH64_hash_t result = XXH3_64bits_digest(state);
  *       // Free the state. Do not use free().
- *       XRPL_XXH3_freeState(state);
+ *       XXH3_freeState(state);
  *       return result;
  *   }
  * @endcode
@@ -174,12 +174,7 @@
 #ifndef BEAST_HASH_XRPL_XXHASH_H_INCLUDED
 #define BEAST_HASH_XRPL_XXHASH_H_INCLUDED
 
-/*****************************
-   Includes
-*****************************/
-#include <stddef.h> /* size_t */
-
-#  define XRPL_XXH_INLINE_ALL
+#define XRPL_XXH_INLINE_ALL
 
 namespace beast {
 namespace detail {
@@ -295,56 +290,56 @@ namespace detail {
     * in case they were already defined with XRPL_XXH_NAMESPACE.
     * They will then be redefined for XRPL_XXH_INLINE_ALL
     */
-#  undef XRPL_XXH_versionNumber
-    /* XRPL_XXH32 */
-#  undef XRPL_XXH32
-#  undef XRPL_XXH32_createState
-#  undef XRPL_XXH32_freeState
-#  undef XRPL_XXH32_reset
-#  undef XRPL_XXH32_update
-#  undef XRPL_XXH32_digest
-#  undef XRPL_XXH32_copyState
-#  undef XRPL_XXH32_canonicalFromHash
-#  undef XRPL_XXH32_hashFromCanonical
-    /* XRPL_XXH64 */
-#  undef XRPL_XXH64
-#  undef XRPL_XXH64_createState
-#  undef XRPL_XXH64_freeState
-#  undef XRPL_XXH64_reset
-#  undef XRPL_XXH64_update
-#  undef XRPL_XXH64_digest
-#  undef XRPL_XXH64_copyState
-#  undef XRPL_XXH64_canonicalFromHash
-#  undef XRPL_XXH64_hashFromCanonical
-    /* XRPL_XXH3_64bits */
-#  undef XRPL_XXH3_64bits
-#  undef XRPL_XXH3_64bits_withSecret
-#  undef XRPL_XXH3_64bits_withSeed
-#  undef XRPL_XXH3_64bits_withSecretandSeed
-#  undef XRPL_XXH3_createState
-#  undef XRPL_XXH3_freeState
-#  undef XRPL_XXH3_copyState
-#  undef XRPL_XXH3_64bits_reset
-#  undef XRPL_XXH3_64bits_reset_withSeed
-#  undef XRPL_XXH3_64bits_reset_withSecret
-#  undef XRPL_XXH3_64bits_update
-#  undef XRPL_XXH3_64bits_digest
-#  undef XRPL_XXH3_generateSecret
-    /* XRPL_XXH3_128bits */
-#  undef XRPL_XXH128
-#  undef XRPL_XXH3_128bits
-#  undef XRPL_XXH3_128bits_withSeed
-#  undef XRPL_XXH3_128bits_withSecret
-#  undef XRPL_XXH3_128bits_reset
-#  undef XRPL_XXH3_128bits_reset_withSeed
-#  undef XRPL_XXH3_128bits_reset_withSecret
-#  undef XRPL_XXH3_128bits_reset_withSecretandSeed
-#  undef XRPL_XXH3_128bits_update
-#  undef XRPL_XXH3_128bits_digest
-#  undef XRPL_XXH128_isEqual
-#  undef XRPL_XXH128_cmp
-#  undef XRPL_XXH128_canonicalFromHash
-#  undef XRPL_XXH128_hashFromCanonical
+#  undef XXH_versionNumber
+    /* XXH32 */
+#  undef XXH32
+#  undef XXH32_createState
+#  undef XXH32_freeState
+#  undef XXH32_reset
+#  undef XXH32_update
+#  undef XXH32_digest
+#  undef XXH32_copyState
+#  undef XXH32_canonicalFromHash
+#  undef XXH32_hashFromCanonical
+    /* XXH64 */
+#  undef XXH64
+#  undef XXH64_createState
+#  undef XXH64_freeState
+#  undef XXH64_reset
+#  undef XXH64_update
+#  undef XXH64_digest
+#  undef XXH64_copyState
+#  undef XXH64_canonicalFromHash
+#  undef XXH64_hashFromCanonical
+    /* XXH3_64bits */
+#  undef XXH3_64bits
+#  undef XXH3_64bits_withSecret
+#  undef XXH3_64bits_withSeed
+#  undef XXH3_64bits_withSecretandSeed
+#  undef XXH3_createState
+#  undef XXH3_freeState
+#  undef XXH3_copyState
+#  undef XXH3_64bits_reset
+#  undef XXH3_64bits_reset_withSeed
+#  undef XXH3_64bits_reset_withSecret
+#  undef XXH3_64bits_update
+#  undef XXH3_64bits_digest
+#  undef XXH3_generateSecret
+    /* XXH3_128bits */
+#  undef XXH128
+#  undef XXH3_128bits
+#  undef XXH3_128bits_withSeed
+#  undef XXH3_128bits_withSecret
+#  undef XXH3_128bits_reset
+#  undef XXH3_128bits_reset_withSeed
+#  undef XXH3_128bits_reset_withSecret
+#  undef XXH3_128bits_reset_withSecretandSeed
+#  undef XXH3_128bits_update
+#  undef XXH3_128bits_digest
+#  undef XXH128_isEqual
+#  undef XXH128_cmp
+#  undef XXH128_canonicalFromHash
+#  undef XXH128_hashFromCanonical
     /* Finally, free the namespace itself */
 #  undef XRPL_XXH_NAMESPACE
 
@@ -358,19 +353,19 @@ namespace detail {
     * Meanwhile, renaming can be achieved in a single place.
     */
 #  define XRPL_XXH_IPREF(Id)   XRPL_XXH_NAMESPACE ## Id
-#  define XRPL_XXH_OK XRPL_XXH_IPREF(XRPL_XXH_OK)
-#  define XRPL_XXH_ERROR XRPL_XXH_IPREF(XRPL_XXH_ERROR)
-#  define XRPL_XXH_errorcode XRPL_XXH_IPREF(XRPL_XXH_errorcode)
-#  define XRPL_XXH32_canonical_t  XRPL_XXH_IPREF(XRPL_XXH32_canonical_t)
-#  define XRPL_XXH64_canonical_t  XRPL_XXH_IPREF(XRPL_XXH64_canonical_t)
-#  define XRPL_XXH128_canonical_t XRPL_XXH_IPREF(XRPL_XXH128_canonical_t)
-#  define XRPL_XXH32_state_s XRPL_XXH_IPREF(XRPL_XXH32_state_s)
-#  define XRPL_XXH32_state_t XRPL_XXH_IPREF(XRPL_XXH32_state_t)
-#  define XRPL_XXH64_state_s XRPL_XXH_IPREF(XRPL_XXH64_state_s)
-#  define XRPL_XXH64_state_t XRPL_XXH_IPREF(XRPL_XXH64_state_t)
-#  define XRPL_XXH3_state_s  XRPL_XXH_IPREF(XRPL_XXH3_state_s)
-#  define XRPL_XXH3_state_t  XRPL_XXH_IPREF(XRPL_XXH3_state_t)
-#  define XRPL_XXH128_hash_t XRPL_XXH_IPREF(XRPL_XXH128_hash_t)
+#  define XXH_OK XRPL_XXH_IPREF(XXH_OK)
+#  define XXH_ERROR XRPL_XXH_IPREF(XXH_ERROR)
+#  define XXH_errorcode XRPL_XXH_IPREF(XXH_errorcode)
+#  define XXH32_canonical_t  XRPL_XXH_IPREF(XXH32_canonical_t)
+#  define XXH64_canonical_t  XRPL_XXH_IPREF(XXH64_canonical_t)
+#  define XXH128_canonical_t XRPL_XXH_IPREF(XXH128_canonical_t)
+#  define XXH32_state_s XRPL_XXH_IPREF(XXH32_state_s)
+#  define XXH32_state_t XRPL_XXH_IPREF(XXH32_state_t)
+#  define XXH64_state_s XRPL_XXH_IPREF(XXH64_state_s)
+#  define XXH64_state_t XRPL_XXH_IPREF(XXH64_state_t)
+#  define XXH3_state_s  XRPL_XXH_IPREF(XXH3_state_s)
+#  define XXH3_state_t  XRPL_XXH_IPREF(XXH3_state_t)
+#  define XXH128_hash_t XRPL_XXH_IPREF(XXH128_hash_t)
    /* Ensure the header is parsed again, even if it was previously included */
 #  undef XRPL_XXHASH_H_5627135585666179
 #  undef XRPL_XXHASH_H_STATIC_13879238742
@@ -398,59 +393,59 @@ namespace detail {
 #ifdef XRPL_XXH_NAMESPACE
 #  define XRPL_XXH_CAT(A,B) A##B
 #  define XRPL_XXH_NAME2(A,B) XRPL_XXH_CAT(A,B)
-#  define XRPL_XXH_versionNumber XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH_versionNumber)
-/* XRPL_XXH32 */
-#  define XRPL_XXH32 XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH32)
-#  define XRPL_XXH32_createState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH32_createState)
-#  define XRPL_XXH32_freeState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH32_freeState)
-#  define XRPL_XXH32_reset XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH32_reset)
-#  define XRPL_XXH32_update XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH32_update)
-#  define XRPL_XXH32_digest XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH32_digest)
-#  define XRPL_XXH32_copyState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH32_copyState)
-#  define XRPL_XXH32_canonicalFromHash XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH32_canonicalFromHash)
-#  define XRPL_XXH32_hashFromCanonical XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH32_hashFromCanonical)
-/* XRPL_XXH64 */
-#  define XRPL_XXH64 XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH64)
-#  define XRPL_XXH64_createState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH64_createState)
-#  define XRPL_XXH64_freeState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH64_freeState)
-#  define XRPL_XXH64_reset XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH64_reset)
-#  define XRPL_XXH64_update XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH64_update)
-#  define XRPL_XXH64_digest XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH64_digest)
-#  define XRPL_XXH64_copyState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH64_copyState)
-#  define XRPL_XXH64_canonicalFromHash XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH64_canonicalFromHash)
-#  define XRPL_XXH64_hashFromCanonical XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH64_hashFromCanonical)
-/* XRPL_XXH3_64bits */
-#  define XRPL_XXH3_64bits XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_64bits)
-#  define XRPL_XXH3_64bits_withSecret XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_64bits_withSecret)
-#  define XRPL_XXH3_64bits_withSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_64bits_withSeed)
-#  define XRPL_XXH3_64bits_withSecretandSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_64bits_withSecretandSeed)
-#  define XRPL_XXH3_createState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_createState)
-#  define XRPL_XXH3_freeState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_freeState)
-#  define XRPL_XXH3_copyState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_copyState)
-#  define XRPL_XXH3_64bits_reset XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_64bits_reset)
-#  define XRPL_XXH3_64bits_reset_withSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_64bits_reset_withSeed)
-#  define XRPL_XXH3_64bits_reset_withSecret XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_64bits_reset_withSecret)
-#  define XRPL_XXH3_64bits_reset_withSecretandSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_64bits_reset_withSecretandSeed)
-#  define XRPL_XXH3_64bits_update XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_64bits_update)
-#  define XRPL_XXH3_64bits_digest XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_64bits_digest)
-#  define XRPL_XXH3_generateSecret XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_generateSecret)
-#  define XRPL_XXH3_generateSecret_fromSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_generateSecret_fromSeed)
-/* XRPL_XXH3_128bits */
-#  define XRPL_XXH128 XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH128)
-#  define XRPL_XXH3_128bits XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_128bits)
-#  define XRPL_XXH3_128bits_withSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_128bits_withSeed)
-#  define XRPL_XXH3_128bits_withSecret XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_128bits_withSecret)
-#  define XRPL_XXH3_128bits_withSecretandSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_128bits_withSecretandSeed)
-#  define XRPL_XXH3_128bits_reset XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_128bits_reset)
-#  define XRPL_XXH3_128bits_reset_withSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_128bits_reset_withSeed)
-#  define XRPL_XXH3_128bits_reset_withSecret XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_128bits_reset_withSecret)
-#  define XRPL_XXH3_128bits_reset_withSecretandSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_128bits_reset_withSecretandSeed)
-#  define XRPL_XXH3_128bits_update XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_128bits_update)
-#  define XRPL_XXH3_128bits_digest XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH3_128bits_digest)
-#  define XRPL_XXH128_isEqual XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH128_isEqual)
-#  define XRPL_XXH128_cmp     XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH128_cmp)
-#  define XRPL_XXH128_canonicalFromHash XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH128_canonicalFromHash)
-#  define XRPL_XXH128_hashFromCanonical XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XRPL_XXH128_hashFromCanonical)
+#  define XXH_versionNumber XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH_versionNumber)
+/* XXH32 */
+#  define XXH32 XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH32)
+#  define XXH32_createState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH32_createState)
+#  define XXH32_freeState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH32_freeState)
+#  define XXH32_reset XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH32_reset)
+#  define XXH32_update XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH32_update)
+#  define XXH32_digest XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH32_digest)
+#  define XXH32_copyState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH32_copyState)
+#  define XXH32_canonicalFromHash XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH32_canonicalFromHash)
+#  define XXH32_hashFromCanonical XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH32_hashFromCanonical)
+/* XXH64 */
+#  define XXH64 XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH64)
+#  define XXH64_createState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH64_createState)
+#  define XXH64_freeState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH64_freeState)
+#  define XXH64_reset XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH64_reset)
+#  define XXH64_update XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH64_update)
+#  define XXH64_digest XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH64_digest)
+#  define XXH64_copyState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH64_copyState)
+#  define XXH64_canonicalFromHash XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH64_canonicalFromHash)
+#  define XXH64_hashFromCanonical XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH64_hashFromCanonical)
+/* XXH3_64bits */
+#  define XXH3_64bits XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_64bits)
+#  define XXH3_64bits_withSecret XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_64bits_withSecret)
+#  define XXH3_64bits_withSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_64bits_withSeed)
+#  define XXH3_64bits_withSecretandSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_64bits_withSecretandSeed)
+#  define XXH3_createState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_createState)
+#  define XXH3_freeState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_freeState)
+#  define XXH3_copyState XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_copyState)
+#  define XXH3_64bits_reset XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_64bits_reset)
+#  define XXH3_64bits_reset_withSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_64bits_reset_withSeed)
+#  define XXH3_64bits_reset_withSecret XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_64bits_reset_withSecret)
+#  define XXH3_64bits_reset_withSecretandSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_64bits_reset_withSecretandSeed)
+#  define XXH3_64bits_update XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_64bits_update)
+#  define XXH3_64bits_digest XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_64bits_digest)
+#  define XXH3_generateSecret XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_generateSecret)
+#  define XXH3_generateSecret_fromSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_generateSecret_fromSeed)
+/* XXH3_128bits */
+#  define XXH128 XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH128)
+#  define XXH3_128bits XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_128bits)
+#  define XXH3_128bits_withSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_128bits_withSeed)
+#  define XXH3_128bits_withSecret XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_128bits_withSecret)
+#  define XXH3_128bits_withSecretandSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_128bits_withSecretandSeed)
+#  define XXH3_128bits_reset XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_128bits_reset)
+#  define XXH3_128bits_reset_withSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_128bits_reset_withSeed)
+#  define XXH3_128bits_reset_withSecret XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_128bits_reset_withSecret)
+#  define XXH3_128bits_reset_withSecretandSeed XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_128bits_reset_withSecretandSeed)
+#  define XXH3_128bits_update XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_128bits_update)
+#  define XXH3_128bits_digest XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH3_128bits_digest)
+#  define XXH128_isEqual XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH128_isEqual)
+#  define XXH128_cmp     XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH128_cmp)
+#  define XXH128_canonicalFromHash XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH128_canonicalFromHash)
+#  define XXH128_hashFromCanonical XRPL_XXH_NAME2(XRPL_XXH_NAMESPACE, XXH128_hashFromCanonical)
 #endif
 
 
@@ -498,7 +493,7 @@ namespace detail {
  *
  * @return @ref XRPL_XXH_VERSION_NUMBER of the invoked library.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_CONSTF unsigned XRPL_XXH_versionNumber (void);
+XRPL_XXH_PUBLIC_API XRPL_XXH_CONSTF unsigned XXH_versionNumber (void);
 
 
 /* ****************************
@@ -509,9 +504,9 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_CONSTF unsigned XRPL_XXH_versionNumber (void);
  * @brief Exit code for the streaming API.
  */
 typedef enum {
-    XRPL_XXH_OK = 0, /*!< OK */
-    XRPL_XXH_ERROR   /*!< Error */
-} XRPL_XXH_errorcode;
+    XXH_OK = 0, /*!< OK */
+    XXH_ERROR   /*!< Error */
+} XXH_errorcode;
 
 
 /*-**********************************************************************
@@ -523,20 +518,20 @@ typedef enum {
  *
  * Not necessarily defined to `uint32_t` but functionally equivalent.
  */
-typedef uint32_t XRPL_XXH32_hash_t;
+typedef uint32_t XXH32_hash_t;
 
 #elif !defined (__VMS) \
   && (defined (__cplusplus) \
   || (defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) /* C99 */) )
 #   include <stdint.h>
-    typedef uint32_t XRPL_XXH32_hash_t;
+    typedef uint32_t XXH32_hash_t;
 
 #else
 #   include <limits.h>
 #   if UINT_MAX == 0xFFFFFFFFUL
-      typedef unsigned int XRPL_XXH32_hash_t;
+      typedef unsigned int XXH32_hash_t;
 #   elif ULONG_MAX == 0xFFFFFFFFUL
-      typedef unsigned long XRPL_XXH32_hash_t;
+      typedef unsigned long XXH32_hash_t;
 #   else
 #     error "unsupported platform: need a 32-bit type"
 #   endif
@@ -545,12 +540,12 @@ typedef uint32_t XRPL_XXH32_hash_t;
 /*!
  * @}
  *
- * @defgroup XRPL_XXH32_family XRPL_XXH32 family
+ * @defgroup XRPL_XXH32_family XXH32 family
  * @ingroup public
  * Contains functions used in the classic 32-bit xxHash algorithm.
  *
  * @note
- *   XRPL_XXH32 is useful for older platforms, with no or poor 64-bit performance.
+ *   XXH32 is useful for older platforms, with no or poor 64-bit performance.
  *   Note that the @ref XRPL_XXH3_family provides competitive speed for both 32-bit
  *   and 64-bit systems, and offers true 64/128 bit hash results.
  *
@@ -578,18 +573,18 @@ typedef uint32_t XRPL_XXH32_hash_t;
  * @return The calculated 32-bit hash value.
  *
  * @see
- *    XRPL_XXH64(), XRPL_XXH3_64bits_withSeed(), XRPL_XXH3_128bits_withSeed(), XRPL_XXH128():
+ *    XXH64(), XXH3_64bits_withSeed(), XXH3_128bits_withSeed(), XXH128():
  *    Direct equivalents for the other variants of xxHash.
  * @see
- *    XRPL_XXH32_createState(), XRPL_XXH32_update(), XRPL_XXH32_digest(): Streaming version.
+ *    XXH32_createState(), XXH32_update(), XXH32_digest(): Streaming version.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH32_hash_t XRPL_XXH32 (const void* input, size_t length, XRPL_XXH32_hash_t seed);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH32_hash_t XXH32 (const void* input, size_t length, XXH32_hash_t seed);
 
 #ifndef XRPL_XXH_NO_STREAM
 /*!
  * Streaming functions generate the xxHash value from an incremental input.
  * This method is slower than single-call functions, due to state management.
- * For small inputs, prefer `XRPL_XXH32()` and `XRPL_XXH64()`, which are better optimized.
+ * For small inputs, prefer `XXH32()` and `XXH64()`, which are better optimized.
  *
  * An XRPL_XXH state must first be allocated using `XRPL_XXH*_createState()`.
  *
@@ -612,42 +607,42 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH32_hash_t XRPL_XXH32 (const void* inp
  */
 
 /*!
- * @typedef struct XRPL_XXH32_state_s XRPL_XXH32_state_t
- * @brief The opaque state struct for the XRPL_XXH32 streaming API.
+ * @typedef struct XXH32_state_s XXH32_state_t
+ * @brief The opaque state struct for the XXH32 streaming API.
  *
- * @see XRPL_XXH32_state_s for details.
+ * @see XXH32_state_s for details.
  */
-typedef struct XRPL_XXH32_state_s XRPL_XXH32_state_t;
+typedef struct XXH32_state_s XXH32_state_t;
 
 /*!
- * @brief Allocates an @ref XRPL_XXH32_state_t.
+ * @brief Allocates an @ref XXH32_state_t.
  *
- * Must be freed with XRPL_XXH32_freeState().
- * @return An allocated XRPL_XXH32_state_t on success, `NULL` on failure.
+ * Must be freed with XXH32_freeState().
+ * @return An allocated XXH32_state_t on success, `NULL` on failure.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_MALLOCF XRPL_XXH32_state_t* XRPL_XXH32_createState(void);
+XRPL_XXH_PUBLIC_API XRPL_XXH_MALLOCF XXH32_state_t* XXH32_createState(void);
 /*!
- * @brief Frees an @ref XRPL_XXH32_state_t.
+ * @brief Frees an @ref XXH32_state_t.
  *
- * Must be allocated with XRPL_XXH32_createState().
- * @param statePtr A pointer to an @ref XRPL_XXH32_state_t allocated with @ref XRPL_XXH32_createState().
- * @return XRPL_XXH_OK.
+ * Must be allocated with XXH32_createState().
+ * @param statePtr A pointer to an @ref XXH32_state_t allocated with @ref XXH32_createState().
+ * @return XXH_OK.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode  XRPL_XXH32_freeState(XRPL_XXH32_state_t* statePtr);
+XRPL_XXH_PUBLIC_API XXH_errorcode  XXH32_freeState(XXH32_state_t* statePtr);
 /*!
- * @brief Copies one @ref XRPL_XXH32_state_t to another.
+ * @brief Copies one @ref XXH32_state_t to another.
  *
  * @param dst_state The state to copy to.
  * @param src_state The state to copy from.
  * @pre
  *   @p dst_state and @p src_state must not be `NULL` and must not overlap.
  */
-XRPL_XXH_PUBLIC_API void XRPL_XXH32_copyState(XRPL_XXH32_state_t* dst_state, const XRPL_XXH32_state_t* src_state);
+XRPL_XXH_PUBLIC_API void XXH32_copyState(XXH32_state_t* dst_state, const XXH32_state_t* src_state);
 
 /*!
- * @brief Resets an @ref XRPL_XXH32_state_t to begin a new hash.
+ * @brief Resets an @ref XXH32_state_t to begin a new hash.
  *
- * This function resets and seeds a state. Call it before @ref XRPL_XXH32_update().
+ * This function resets and seeds a state. Call it before @ref XXH32_update().
  *
  * @param statePtr The state struct to reset.
  * @param seed The 32-bit seed to alter the hash result predictably.
@@ -655,12 +650,12 @@ XRPL_XXH_PUBLIC_API void XRPL_XXH32_copyState(XRPL_XXH32_state_t* dst_state, con
  * @pre
  *   @p statePtr must not be `NULL`.
  *
- * @return @ref XRPL_XXH_OK on success, @ref XRPL_XXH_ERROR on failure.
+ * @return @ref XXH_OK on success, @ref XXH_ERROR on failure.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH32_reset  (XRPL_XXH32_state_t* statePtr, XRPL_XXH32_hash_t seed);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH32_reset  (XXH32_state_t* statePtr, XXH32_hash_t seed);
 
 /*!
- * @brief Consumes a block of @p input to an @ref XRPL_XXH32_state_t.
+ * @brief Consumes a block of @p input to an @ref XXH32_state_t.
  *
  * Call this to incrementally consume blocks of data.
  *
@@ -675,15 +670,15 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH32_reset  (XRPL_XXH32_state_t* st
  *   readable, contiguous memory. However, if @p length is `0`, @p input may be
  *   `NULL`. In C++, this also must be *TriviallyCopyable*.
  *
- * @return @ref XRPL_XXH_OK on success, @ref XRPL_XXH_ERROR on failure.
+ * @return @ref XXH_OK on success, @ref XXH_ERROR on failure.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH32_update (XRPL_XXH32_state_t* statePtr, const void* input, size_t length);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH32_update (XXH32_state_t* statePtr, const void* input, size_t length);
 
 /*!
- * @brief Returns the calculated hash value from an @ref XRPL_XXH32_state_t.
+ * @brief Returns the calculated hash value from an @ref XXH32_state_t.
  *
  * @note
- *   Calling XRPL_XXH32_digest() will not affect @p statePtr, so you can update,
+ *   Calling XXH32_digest() will not affect @p statePtr, so you can update,
  *   digest, and update again.
  *
  * @param statePtr The state struct to calculate the hash from.
@@ -693,7 +688,7 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH32_update (XRPL_XXH32_state_t* st
  *
  * @return The calculated xxHash32 value from that state.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH32_hash_t XRPL_XXH32_digest (const XRPL_XXH32_state_t* statePtr);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH32_hash_t XXH32_digest (const XXH32_state_t* statePtr);
 #endif /* !XRPL_XXH_NO_STREAM */
 
 /*******   Canonical representation   *******/
@@ -718,34 +713,34 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH32_hash_t XRPL_XXH32_digest (const XR
  */
 
 /*!
- * @brief Canonical (big endian) representation of @ref XRPL_XXH32_hash_t.
+ * @brief Canonical (big endian) representation of @ref XXH32_hash_t.
  */
 typedef struct {
     unsigned char digest[4]; /*!< Hash bytes, big endian */
-} XRPL_XXH32_canonical_t;
+} XXH32_canonical_t;
 
 /*!
- * @brief Converts an @ref XRPL_XXH32_hash_t to a big endian @ref XRPL_XXH32_canonical_t.
+ * @brief Converts an @ref XXH32_hash_t to a big endian @ref XXH32_canonical_t.
  *
- * @param dst The @ref XRPL_XXH32_canonical_t pointer to be stored to.
- * @param hash The @ref XRPL_XXH32_hash_t to be converted.
+ * @param dst The @ref XXH32_canonical_t pointer to be stored to.
+ * @param hash The @ref XXH32_hash_t to be converted.
  *
  * @pre
  *   @p dst must not be `NULL`.
  */
-XRPL_XXH_PUBLIC_API void XRPL_XXH32_canonicalFromHash(XRPL_XXH32_canonical_t* dst, XRPL_XXH32_hash_t hash);
+XRPL_XXH_PUBLIC_API void XXH32_canonicalFromHash(XXH32_canonical_t* dst, XXH32_hash_t hash);
 
 /*!
- * @brief Converts an @ref XRPL_XXH32_canonical_t to a native @ref XRPL_XXH32_hash_t.
+ * @brief Converts an @ref XXH32_canonical_t to a native @ref XXH32_hash_t.
  *
- * @param src The @ref XRPL_XXH32_canonical_t to convert.
+ * @param src The @ref XXH32_canonical_t to convert.
  *
  * @pre
  *   @p src must not be `NULL`.
  *
  * @return The converted hash.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH32_hash_t XRPL_XXH32_hashFromCanonical(const XRPL_XXH32_canonical_t* src);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH32_hash_t XXH32_hashFromCanonical(const XXH32_canonical_t* src);
 
 
 /*! @cond Doxygen ignores this part */
@@ -828,27 +823,27 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH32_hash_t XRPL_XXH32_hashFromCanonica
  *
  * Not necessarily defined to `uint64_t` but functionally equivalent.
  */
-typedef uint64_t XRPL_XXH64_hash_t;
+typedef uint64_t XXH64_hash_t;
 #elif !defined (__VMS) \
   && (defined (__cplusplus) \
   || (defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) /* C99 */) )
 #  include <stdint.h>
-   typedef uint64_t XRPL_XXH64_hash_t;
+   typedef uint64_t XXH64_hash_t;
 #else
 #  include <limits.h>
 #  if defined(__LP64__) && ULONG_MAX == 0xFFFFFFFFFFFFFFFFULL
      /* LP64 ABI says uint64_t is unsigned long */
-     typedef unsigned long XRPL_XXH64_hash_t;
+     typedef unsigned long XXH64_hash_t;
 #  else
      /* the following type must have a width of 64-bit */
-     typedef unsigned long long XRPL_XXH64_hash_t;
+     typedef unsigned long long XXH64_hash_t;
 #  endif
 #endif
 
 /*!
  * @}
  *
- * @defgroup XRPL_XXH64_family XRPL_XXH64 family
+ * @defgroup XRPL_XXH64_family XXH64 family
  * @ingroup public
  * @{
  * Contains functions used in the classic 64-bit xxHash algorithm.
@@ -877,53 +872,53 @@ typedef uint64_t XRPL_XXH64_hash_t;
  * @return The calculated 64-bit hash.
  *
  * @see
- *    XRPL_XXH32(), XRPL_XXH3_64bits_withSeed(), XRPL_XXH3_128bits_withSeed(), XRPL_XXH128():
+ *    XXH32(), XXH3_64bits_withSeed(), XXH3_128bits_withSeed(), XXH128():
  *    Direct equivalents for the other variants of xxHash.
  * @see
- *    XRPL_XXH64_createState(), XRPL_XXH64_update(), XRPL_XXH64_digest(): Streaming version.
+ *    XXH64_createState(), XXH64_update(), XXH64_digest(): Streaming version.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t XRPL_XXH64(XRPL_XXH_NOESCAPE const void* input, size_t length, XRPL_XXH64_hash_t seed);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH64_hash_t XXH64(XRPL_XXH_NOESCAPE const void* input, size_t length, XXH64_hash_t seed);
 
 /*******   Streaming   *******/
 #ifndef XRPL_XXH_NO_STREAM
 /*!
- * @brief The opaque state struct for the XRPL_XXH64 streaming API.
+ * @brief The opaque state struct for the XXH64 streaming API.
  *
- * @see XRPL_XXH64_state_s for details.
+ * @see XXH64_state_s for details.
  */
-typedef struct XRPL_XXH64_state_s XRPL_XXH64_state_t;   /* incomplete type */
+typedef struct XXH64_state_s XXH64_state_t;   /* incomplete type */
 
 /*!
- * @brief Allocates an @ref XRPL_XXH64_state_t.
+ * @brief Allocates an @ref XXH64_state_t.
  *
- * Must be freed with XRPL_XXH64_freeState().
- * @return An allocated XRPL_XXH64_state_t on success, `NULL` on failure.
+ * Must be freed with XXH64_freeState().
+ * @return An allocated XXH64_state_t on success, `NULL` on failure.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_MALLOCF XRPL_XXH64_state_t* XRPL_XXH64_createState(void);
+XRPL_XXH_PUBLIC_API XRPL_XXH_MALLOCF XXH64_state_t* XXH64_createState(void);
 
 /*!
- * @brief Frees an @ref XRPL_XXH64_state_t.
+ * @brief Frees an @ref XXH64_state_t.
  *
- * Must be allocated with XRPL_XXH64_createState().
- * @param statePtr A pointer to an @ref XRPL_XXH64_state_t allocated with @ref XRPL_XXH64_createState().
- * @return XRPL_XXH_OK.
+ * Must be allocated with XXH64_createState().
+ * @param statePtr A pointer to an @ref XXH64_state_t allocated with @ref XXH64_createState().
+ * @return XXH_OK.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode  XRPL_XXH64_freeState(XRPL_XXH64_state_t* statePtr);
+XRPL_XXH_PUBLIC_API XXH_errorcode  XXH64_freeState(XXH64_state_t* statePtr);
 
 /*!
- * @brief Copies one @ref XRPL_XXH64_state_t to another.
+ * @brief Copies one @ref XXH64_state_t to another.
  *
  * @param dst_state The state to copy to.
  * @param src_state The state to copy from.
  * @pre
  *   @p dst_state and @p src_state must not be `NULL` and must not overlap.
  */
-XRPL_XXH_PUBLIC_API void XRPL_XXH64_copyState(XRPL_XXH_NOESCAPE XRPL_XXH64_state_t* dst_state, const XRPL_XXH64_state_t* src_state);
+XRPL_XXH_PUBLIC_API void XXH64_copyState(XRPL_XXH_NOESCAPE XXH64_state_t* dst_state, const XXH64_state_t* src_state);
 
 /*!
- * @brief Resets an @ref XRPL_XXH64_state_t to begin a new hash.
+ * @brief Resets an @ref XXH64_state_t to begin a new hash.
  *
- * This function resets and seeds a state. Call it before @ref XRPL_XXH64_update().
+ * This function resets and seeds a state. Call it before @ref XXH64_update().
  *
  * @param statePtr The state struct to reset.
  * @param seed The 64-bit seed to alter the hash result predictably.
@@ -931,12 +926,12 @@ XRPL_XXH_PUBLIC_API void XRPL_XXH64_copyState(XRPL_XXH_NOESCAPE XRPL_XXH64_state
  * @pre
  *   @p statePtr must not be `NULL`.
  *
- * @return @ref XRPL_XXH_OK on success, @ref XRPL_XXH_ERROR on failure.
+ * @return @ref XXH_OK on success, @ref XXH_ERROR on failure.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH64_reset  (XRPL_XXH_NOESCAPE XRPL_XXH64_state_t* statePtr, XRPL_XXH64_hash_t seed);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH64_reset  (XRPL_XXH_NOESCAPE XXH64_state_t* statePtr, XXH64_hash_t seed);
 
 /*!
- * @brief Consumes a block of @p input to an @ref XRPL_XXH64_state_t.
+ * @brief Consumes a block of @p input to an @ref XXH64_state_t.
  *
  * Call this to incrementally consume blocks of data.
  *
@@ -951,15 +946,15 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH64_reset  (XRPL_XXH_NOESCAPE XRPL
  *   readable, contiguous memory. However, if @p length is `0`, @p input may be
  *   `NULL`. In C++, this also must be *TriviallyCopyable*.
  *
- * @return @ref XRPL_XXH_OK on success, @ref XRPL_XXH_ERROR on failure.
+ * @return @ref XXH_OK on success, @ref XXH_ERROR on failure.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH64_update (XRPL_XXH_NOESCAPE XRPL_XXH64_state_t* statePtr, XRPL_XXH_NOESCAPE const void* input, size_t length);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH64_update (XRPL_XXH_NOESCAPE XXH64_state_t* statePtr, XRPL_XXH_NOESCAPE const void* input, size_t length);
 
 /*!
- * @brief Returns the calculated hash value from an @ref XRPL_XXH64_state_t.
+ * @brief Returns the calculated hash value from an @ref XXH64_state_t.
  *
  * @note
- *   Calling XRPL_XXH64_digest() will not affect @p statePtr, so you can update,
+ *   Calling XXH64_digest() will not affect @p statePtr, so you can update,
  *   digest, and update again.
  *
  * @param statePtr The state struct to calculate the hash from.
@@ -969,37 +964,37 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH64_update (XRPL_XXH_NOESCAPE XRPL
  *
  * @return The calculated xxHash64 value from that state.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t XRPL_XXH64_digest (XRPL_XXH_NOESCAPE const XRPL_XXH64_state_t* statePtr);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH64_hash_t XXH64_digest (XRPL_XXH_NOESCAPE const XXH64_state_t* statePtr);
 #endif /* !XRPL_XXH_NO_STREAM */
 /*******   Canonical representation   *******/
 
 /*!
- * @brief Canonical (big endian) representation of @ref XRPL_XXH64_hash_t.
+ * @brief Canonical (big endian) representation of @ref XXH64_hash_t.
  */
-typedef struct { unsigned char digest[sizeof(XRPL_XXH64_hash_t)]; } XRPL_XXH64_canonical_t;
+typedef struct { unsigned char digest[sizeof(XXH64_hash_t)]; } XXH64_canonical_t;
 
 /*!
- * @brief Converts an @ref XRPL_XXH64_hash_t to a big endian @ref XRPL_XXH64_canonical_t.
+ * @brief Converts an @ref XXH64_hash_t to a big endian @ref XXH64_canonical_t.
  *
- * @param dst The @ref XRPL_XXH64_canonical_t pointer to be stored to.
- * @param hash The @ref XRPL_XXH64_hash_t to be converted.
+ * @param dst The @ref XXH64_canonical_t pointer to be stored to.
+ * @param hash The @ref XXH64_hash_t to be converted.
  *
  * @pre
  *   @p dst must not be `NULL`.
  */
-XRPL_XXH_PUBLIC_API void XRPL_XXH64_canonicalFromHash(XRPL_XXH_NOESCAPE XRPL_XXH64_canonical_t* dst, XRPL_XXH64_hash_t hash);
+XRPL_XXH_PUBLIC_API void XXH64_canonicalFromHash(XRPL_XXH_NOESCAPE XXH64_canonical_t* dst, XXH64_hash_t hash);
 
 /*!
- * @brief Converts an @ref XRPL_XXH64_canonical_t to a native @ref XRPL_XXH64_hash_t.
+ * @brief Converts an @ref XXH64_canonical_t to a native @ref XXH64_hash_t.
  *
- * @param src The @ref XRPL_XXH64_canonical_t to convert.
+ * @param src The @ref XXH64_canonical_t to convert.
  *
  * @pre
  *   @p src must not be `NULL`.
  *
  * @return The converted hash.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t XRPL_XXH64_hashFromCanonical(XRPL_XXH_NOESCAPE const XRPL_XXH64_canonical_t* src);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH64_hash_t XXH64_hashFromCanonical(XRPL_XXH_NOESCAPE const XXH64_canonical_t* src);
 
 #ifndef XRPL_XXH_NO_XRPL_XXH3
 
@@ -1020,13 +1015,13 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t XRPL_XXH64_hashFromCanonica
  *
  *    https://fastcompression.blogspot.com/2019/03/presenting-xxh3.html
  *
- * Compared to XRPL_XXH64, expect XRPL_XXH3 to run approximately
+ * Compared to XXH64, expect XRPL_XXH3 to run approximately
  * ~2x faster on large inputs and >3x faster on small ones,
  * exact differences vary depending on platform.
  *
  * XRPL_XXH3's speed benefits greatly from SIMD and 64-bit arithmetic,
  * but does not require it.
- * Most 32-bit and 64-bit targets that can run XRPL_XXH32 smoothly can run XRPL_XXH3
+ * Most 32-bit and 64-bit targets that can run XXH32 smoothly can run XRPL_XXH3
  * at competitive speeds, even without vector support. Further details are
  * explained in the implementation.
  *
@@ -1064,18 +1059,18 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t XRPL_XXH64_hashFromCanonica
 /*!
  * @brief 64-bit unseeded variant of XRPL_XXH3.
  *
- * This is equivalent to @ref XRPL_XXH3_64bits_withSeed() with a seed of 0, however
+ * This is equivalent to @ref XXH3_64bits_withSeed() with a seed of 0, however
  * it may have slightly better performance due to constant propagation of the
  * defaults.
  *
  * @see
- *    XRPL_XXH32(), XRPL_XXH64(), XRPL_XXH3_128bits(): equivalent for the other xxHash algorithms
+ *    XXH32(), XXH64(), XXH3_128bits(): equivalent for the other xxHash algorithms
  * @see
- *    XRPL_XXH3_64bits_withSeed(), XRPL_XXH3_64bits_withSecret(): other seeding variants
+ *    XXH3_64bits_withSeed(), XXH3_64bits_withSecret(): other seeding variants
  * @see
- *    XRPL_XXH3_64bits_reset(), XRPL_XXH3_64bits_update(), XRPL_XXH3_64bits_digest(): Streaming version.
+ *    XXH3_64bits_reset(), XXH3_64bits_update(), XXH3_64bits_digest(): Streaming version.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t XRPL_XXH3_64bits(XRPL_XXH_NOESCAPE const void* input, size_t length);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH64_hash_t XXH3_64bits(XRPL_XXH_NOESCAPE const void* input, size_t length);
 
 /*!
  * @brief 64-bit seeded variant of XRPL_XXH3
@@ -1086,20 +1081,20 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t XRPL_XXH3_64bits(XRPL_XXH_N
  * While this operation is decently fast, note that it's not completely free.
  *
  * @note
- *    seed == 0 produces the same results as @ref XRPL_XXH3_64bits().
+ *    seed == 0 produces the same results as @ref XXH3_64bits().
  *
  * @param input The data to hash
  * @param length The length
  * @param seed The 64-bit seed to alter the state.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t XRPL_XXH3_64bits_withSeed(XRPL_XXH_NOESCAPE const void* input, size_t length, XRPL_XXH64_hash_t seed);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH64_hash_t XXH3_64bits_withSeed(XRPL_XXH_NOESCAPE const void* input, size_t length, XXH64_hash_t seed);
 
 /*!
  * The bare minimum size for a custom secret.
  *
  * @see
- *  XRPL_XXH3_64bits_withSecret(), XRPL_XXH3_64bits_reset_withSecret(),
- *  XRPL_XXH3_128bits_withSecret(), XRPL_XXH3_128bits_reset_withSecret().
+ *  XXH3_64bits_withSecret(), XXH3_64bits_reset_withSecret(),
+ *  XXH3_128bits_withSecret(), XXH3_128bits_reset_withSecret().
  */
 #define XRPL_XXH3_SECRET_SIZE_MIN 136
 
@@ -1113,15 +1108,15 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t XRPL_XXH3_64bits_withSeed(X
  * Therefore, the secret _must_ look like a bunch of random bytes.
  * Avoid "trivial" or structured data such as repeated sequences or a text document.
  * Whenever in doubt about the "randomness" of the blob of bytes,
- * consider employing "XRPL_XXH3_generateSecret()" instead (see below).
+ * consider employing "XXH3_generateSecret()" instead (see below).
  * It will generate a proper high entropy secret derived from the blob of bytes.
- * Another advantage of using XRPL_XXH3_generateSecret() is that
+ * Another advantage of using XXH3_generateSecret() is that
  * it guarantees that all bits within the initial blob of bytes
  * will impact every bit of the output.
  * This is not necessarily the case when using the blob of bytes directly
  * because, when hashing _small_ inputs, only a portion of the secret is employed.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t XRPL_XXH3_64bits_withSecret(XRPL_XXH_NOESCAPE const void* data, size_t len, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH64_hash_t XXH3_64bits_withSecret(XRPL_XXH_NOESCAPE const void* data, size_t len, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize);
 
 
 /*******   Streaming   *******/
@@ -1136,43 +1131,43 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t XRPL_XXH3_64bits_withSecret
 /*!
  * @brief The state struct for the XRPL_XXH3 streaming API.
  *
- * @see XRPL_XXH3_state_s for details.
+ * @see XXH3_state_s for details.
  */
-typedef struct XRPL_XXH3_state_s XRPL_XXH3_state_t;
-XRPL_XXH_PUBLIC_API XRPL_XXH_MALLOCF XRPL_XXH3_state_t* XRPL_XXH3_createState(void);
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_freeState(XRPL_XXH3_state_t* statePtr);
+typedef struct XXH3_state_s XXH3_state_t;
+XRPL_XXH_PUBLIC_API XRPL_XXH_MALLOCF XXH3_state_t* XXH3_createState(void);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH3_freeState(XXH3_state_t* statePtr);
 
 /*!
- * @brief Copies one @ref XRPL_XXH3_state_t to another.
+ * @brief Copies one @ref XXH3_state_t to another.
  *
  * @param dst_state The state to copy to.
  * @param src_state The state to copy from.
  * @pre
  *   @p dst_state and @p src_state must not be `NULL` and must not overlap.
  */
-XRPL_XXH_PUBLIC_API void XRPL_XXH3_copyState(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* dst_state, XRPL_XXH_NOESCAPE const XRPL_XXH3_state_t* src_state);
+XRPL_XXH_PUBLIC_API void XXH3_copyState(XRPL_XXH_NOESCAPE XXH3_state_t* dst_state, XRPL_XXH_NOESCAPE const XXH3_state_t* src_state);
 
 /*!
- * @brief Resets an @ref XRPL_XXH3_state_t to begin a new hash.
+ * @brief Resets an @ref XXH3_state_t to begin a new hash.
  *
- * This function resets `statePtr` and generate a secret with default parameters. Call it before @ref XRPL_XXH3_64bits_update().
- * Digest will be equivalent to `XRPL_XXH3_64bits()`.
+ * This function resets `statePtr` and generate a secret with default parameters. Call it before @ref XXH3_64bits_update().
+ * Digest will be equivalent to `XXH3_64bits()`.
  *
  * @param statePtr The state struct to reset.
  *
  * @pre
  *   @p statePtr must not be `NULL`.
  *
- * @return @ref XRPL_XXH_OK on success, @ref XRPL_XXH_ERROR on failure.
+ * @return @ref XXH_OK on success, @ref XXH_ERROR on failure.
  *
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_64bits_reset(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH3_64bits_reset(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr);
 
 /*!
- * @brief Resets an @ref XRPL_XXH3_state_t with 64-bit seed to begin a new hash.
+ * @brief Resets an @ref XXH3_state_t with 64-bit seed to begin a new hash.
  *
- * This function resets `statePtr` and generate a secret from `seed`. Call it before @ref XRPL_XXH3_64bits_update().
- * Digest will be equivalent to `XRPL_XXH3_64bits_withSeed()`.
+ * This function resets `statePtr` and generate a secret from `seed`. Call it before @ref XXH3_64bits_update().
+ * Digest will be equivalent to `XXH3_64bits_withSeed()`.
  *
  * @param statePtr The state struct to reset.
  * @param seed     The 64-bit seed to alter the state.
@@ -1180,24 +1175,24 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_64bits_reset(XRPL_XXH_NOESCAPE 
  * @pre
  *   @p statePtr must not be `NULL`.
  *
- * @return @ref XRPL_XXH_OK on success, @ref XRPL_XXH_ERROR on failure.
+ * @return @ref XXH_OK on success, @ref XXH_ERROR on failure.
  *
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_64bits_reset_withSeed(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr, XRPL_XXH64_hash_t seed);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH3_64bits_reset_withSeed(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr, XXH64_hash_t seed);
 
 /*!
- * XRPL_XXH3_64bits_reset_withSecret():
+ * XXH3_64bits_reset_withSecret():
  * `secret` is referenced, it _must outlive_ the hash streaming session.
  * Similar to one-shot API, `secretSize` must be >= `XRPL_XXH3_SECRET_SIZE_MIN`,
  * and the quality of produced hash values depends on secret's entropy
  * (secret's content should look like a bunch of random bytes).
  * When in doubt about the randomness of a candidate `secret`,
- * consider employing `XRPL_XXH3_generateSecret()` instead (see below).
+ * consider employing `XXH3_generateSecret()` instead (see below).
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_64bits_reset_withSecret(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH3_64bits_reset_withSecret(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize);
 
 /*!
- * @brief Consumes a block of @p input to an @ref XRPL_XXH3_state_t.
+ * @brief Consumes a block of @p input to an @ref XXH3_state_t.
  *
  * Call this to incrementally consume blocks of data.
  *
@@ -1212,15 +1207,15 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_64bits_reset_withSecret(XRPL_XX
  *   readable, contiguous memory. However, if @p length is `0`, @p input may be
  *   `NULL`. In C++, this also must be *TriviallyCopyable*.
  *
- * @return @ref XRPL_XXH_OK on success, @ref XRPL_XXH_ERROR on failure.
+ * @return @ref XXH_OK on success, @ref XXH_ERROR on failure.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_64bits_update (XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* input, size_t length);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH3_64bits_update (XRPL_XXH_NOESCAPE XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* input, size_t length);
 
 /*!
- * @brief Returns the calculated XRPL_XXH3 64-bit hash value from an @ref XRPL_XXH3_state_t.
+ * @brief Returns the calculated XRPL_XXH3 64-bit hash value from an @ref XXH3_state_t.
  *
  * @note
- *   Calling XRPL_XXH3_64bits_digest() will not affect @p statePtr, so you can update,
+ *   Calling XXH3_64bits_digest() will not affect @p statePtr, so you can update,
  *   digest, and update again.
  *
  * @param statePtr The state struct to calculate the hash from.
@@ -1230,11 +1225,11 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_64bits_update (XRPL_XXH_NOESCAP
  *
  * @return The calculated XRPL_XXH3 64-bit hash value from that state.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t  XRPL_XXH3_64bits_digest (XRPL_XXH_NOESCAPE const XRPL_XXH3_state_t* statePtr);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH64_hash_t  XXH3_64bits_digest (XRPL_XXH_NOESCAPE const XXH3_state_t* statePtr);
 #endif /* !XRPL_XXH_NO_STREAM */
 
-/* note : canonical representation of XRPL_XXH3 is the same as XRPL_XXH64
- * since they both produce XRPL_XXH64_hash_t values */
+/* note : canonical representation of XRPL_XXH3 is the same as XXH64
+ * since they both produce XXH64_hash_t values */
 
 
 /*-**********************************************************************
@@ -1248,9 +1243,9 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t  XRPL_XXH3_64bits_digest (X
  * endianness.
  */
 typedef struct {
-    XRPL_XXH64_hash_t low64;   /*!< `value & 0xFFFFFFFFFFFFFFFF` */
-    XRPL_XXH64_hash_t high64;  /*!< `value >> 64` */
-} XRPL_XXH128_hash_t;
+    XXH64_hash_t low64;   /*!< `value & 0xFFFFFFFFFFFFFFFF` */
+    XXH64_hash_t high64;  /*!< `value >> 64` */
+} XXH128_hash_t;
 
 /*!
  * @brief Unseeded 128-bit variant of XRPL_XXH3
@@ -1258,22 +1253,22 @@ typedef struct {
  * The 128-bit variant of XRPL_XXH3 has more strength, but it has a bit of overhead
  * for shorter inputs.
  *
- * This is equivalent to @ref XRPL_XXH3_128bits_withSeed() with a seed of 0, however
+ * This is equivalent to @ref XXH3_128bits_withSeed() with a seed of 0, however
  * it may have slightly better performance due to constant propagation of the
  * defaults.
  *
  * @see
- *    XRPL_XXH32(), XRPL_XXH64(), XRPL_XXH3_64bits(): equivalent for the other xxHash algorithms
+ *    XXH32(), XXH64(), XXH3_64bits(): equivalent for the other xxHash algorithms
  * @see
- *    XRPL_XXH3_128bits_withSeed(), XRPL_XXH3_128bits_withSecret(): other seeding variants
+ *    XXH3_128bits_withSeed(), XXH3_128bits_withSecret(): other seeding variants
  * @see
- *    XRPL_XXH3_128bits_reset(), XRPL_XXH3_128bits_update(), XRPL_XXH3_128bits_digest(): Streaming version.
+ *    XXH3_128bits_reset(), XXH3_128bits_update(), XXH3_128bits_digest(): Streaming version.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH128_hash_t XRPL_XXH3_128bits(XRPL_XXH_NOESCAPE const void* data, size_t len);
-/*! @brief Seeded 128-bit variant of XRPL_XXH3. @see XRPL_XXH3_64bits_withSeed(). */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH128_hash_t XRPL_XXH3_128bits_withSeed(XRPL_XXH_NOESCAPE const void* data, size_t len, XRPL_XXH64_hash_t seed);
-/*! @brief Custom secret 128-bit variant of XRPL_XXH3. @see XRPL_XXH3_64bits_withSecret(). */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH128_hash_t XRPL_XXH3_128bits_withSecret(XRPL_XXH_NOESCAPE const void* data, size_t len, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH128_hash_t XXH3_128bits(XRPL_XXH_NOESCAPE const void* data, size_t len);
+/*! @brief Seeded 128-bit variant of XRPL_XXH3. @see XXH3_64bits_withSeed(). */
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH128_hash_t XXH3_128bits_withSeed(XRPL_XXH_NOESCAPE const void* data, size_t len, XXH64_hash_t seed);
+/*! @brief Custom secret 128-bit variant of XRPL_XXH3. @see XXH3_64bits_withSecret(). */
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH128_hash_t XXH3_128bits_withSecret(XRPL_XXH_NOESCAPE const void* data, size_t len, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize);
 
 /*******   Streaming   *******/
 #ifndef XRPL_XXH_NO_STREAM
@@ -1283,33 +1278,33 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH128_hash_t XRPL_XXH3_128bits_withSecr
  * As a consequence, streaming is slower than one-shot hashing.
  * For better performance, prefer one-shot functions whenever applicable.
  *
- * XRPL_XXH3_128bits uses the same XRPL_XXH3_state_t as XRPL_XXH3_64bits().
- * Use already declared XRPL_XXH3_createState() and XRPL_XXH3_freeState().
+ * XXH3_128bits uses the same XXH3_state_t as XXH3_64bits().
+ * Use already declared XXH3_createState() and XXH3_freeState().
  *
  * All reset and streaming functions have same meaning as their 64-bit counterpart.
  */
 
 /*!
- * @brief Resets an @ref XRPL_XXH3_state_t to begin a new hash.
+ * @brief Resets an @ref XXH3_state_t to begin a new hash.
  *
- * This function resets `statePtr` and generate a secret with default parameters. Call it before @ref XRPL_XXH3_128bits_update().
- * Digest will be equivalent to `XRPL_XXH3_128bits()`.
+ * This function resets `statePtr` and generate a secret with default parameters. Call it before @ref XXH3_128bits_update().
+ * Digest will be equivalent to `XXH3_128bits()`.
  *
  * @param statePtr The state struct to reset.
  *
  * @pre
  *   @p statePtr must not be `NULL`.
  *
- * @return @ref XRPL_XXH_OK on success, @ref XRPL_XXH_ERROR on failure.
+ * @return @ref XXH_OK on success, @ref XXH_ERROR on failure.
  *
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_128bits_reset(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH3_128bits_reset(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr);
 
 /*!
- * @brief Resets an @ref XRPL_XXH3_state_t with 64-bit seed to begin a new hash.
+ * @brief Resets an @ref XXH3_state_t with 64-bit seed to begin a new hash.
  *
- * This function resets `statePtr` and generate a secret from `seed`. Call it before @ref XRPL_XXH3_128bits_update().
- * Digest will be equivalent to `XRPL_XXH3_128bits_withSeed()`.
+ * This function resets `statePtr` and generate a secret from `seed`. Call it before @ref XXH3_128bits_update().
+ * Digest will be equivalent to `XXH3_128bits_withSeed()`.
  *
  * @param statePtr The state struct to reset.
  * @param seed     The 64-bit seed to alter the state.
@@ -1317,15 +1312,15 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_128bits_reset(XRPL_XXH_NOESCAPE
  * @pre
  *   @p statePtr must not be `NULL`.
  *
- * @return @ref XRPL_XXH_OK on success, @ref XRPL_XXH_ERROR on failure.
+ * @return @ref XXH_OK on success, @ref XXH_ERROR on failure.
  *
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_128bits_reset_withSeed(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr, XRPL_XXH64_hash_t seed);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH3_128bits_reset_withSeed(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr, XXH64_hash_t seed);
 /*! @brief Custom secret 128-bit variant of XRPL_XXH3. @see XRPL_XXH_64bits_reset_withSecret(). */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_128bits_reset_withSecret(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH3_128bits_reset_withSecret(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize);
 
 /*!
- * @brief Consumes a block of @p input to an @ref XRPL_XXH3_state_t.
+ * @brief Consumes a block of @p input to an @ref XXH3_state_t.
  *
  * Call this to incrementally consume blocks of data.
  *
@@ -1340,15 +1335,15 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_128bits_reset_withSecret(XRPL_X
  *   readable, contiguous memory. However, if @p length is `0`, @p input may be
  *   `NULL`. In C++, this also must be *TriviallyCopyable*.
  *
- * @return @ref XRPL_XXH_OK on success, @ref XRPL_XXH_ERROR on failure.
+ * @return @ref XXH_OK on success, @ref XXH_ERROR on failure.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_128bits_update (XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* input, size_t length);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH3_128bits_update (XRPL_XXH_NOESCAPE XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* input, size_t length);
 
 /*!
- * @brief Returns the calculated XRPL_XXH3 128-bit hash value from an @ref XRPL_XXH3_state_t.
+ * @brief Returns the calculated XRPL_XXH3 128-bit hash value from an @ref XXH3_state_t.
  *
  * @note
- *   Calling XRPL_XXH3_128bits_digest() will not affect @p statePtr, so you can update,
+ *   Calling XXH3_128bits_digest() will not affect @p statePtr, so you can update,
  *   digest, and update again.
  *
  * @param statePtr The state struct to calculate the hash from.
@@ -1358,56 +1353,56 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_128bits_update (XRPL_XXH_NOESCA
  *
  * @return The calculated XRPL_XXH3 128-bit hash value from that state.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH128_hash_t XRPL_XXH3_128bits_digest (XRPL_XXH_NOESCAPE const XRPL_XXH3_state_t* statePtr);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH128_hash_t XXH3_128bits_digest (XRPL_XXH_NOESCAPE const XXH3_state_t* statePtr);
 #endif /* !XRPL_XXH_NO_STREAM */
 
 /* Following helper functions make it possible to compare XRPL_XXH128_hast_t values.
- * Since XRPL_XXH128_hash_t is a structure, this capability is not offered by the language.
+ * Since XXH128_hash_t is a structure, this capability is not offered by the language.
  * Note: For better performance, these functions can be inlined using XRPL_XXH_INLINE_ALL */
 
 /*!
- * XRPL_XXH128_isEqual():
+ * XXH128_isEqual():
  * Return: 1 if `h1` and `h2` are equal, 0 if they are not.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF int XRPL_XXH128_isEqual(XRPL_XXH128_hash_t h1, XRPL_XXH128_hash_t h2);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF int XXH128_isEqual(XXH128_hash_t h1, XXH128_hash_t h2);
 
 /*!
- * @brief Compares two @ref XRPL_XXH128_hash_t
+ * @brief Compares two @ref XXH128_hash_t
  * This comparator is compatible with stdlib's `qsort()`/`bsearch()`.
  *
  * @return: >0 if *h128_1  > *h128_2
  *          =0 if *h128_1 == *h128_2
  *          <0 if *h128_1  < *h128_2
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF int XRPL_XXH128_cmp(XRPL_XXH_NOESCAPE const void* h128_1, XRPL_XXH_NOESCAPE const void* h128_2);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF int XXH128_cmp(XRPL_XXH_NOESCAPE const void* h128_1, XRPL_XXH_NOESCAPE const void* h128_2);
 
 
 /*******   Canonical representation   *******/
-typedef struct { unsigned char digest[sizeof(XRPL_XXH128_hash_t)]; } XRPL_XXH128_canonical_t;
+typedef struct { unsigned char digest[sizeof(XXH128_hash_t)]; } XXH128_canonical_t;
 
 
 /*!
- * @brief Converts an @ref XRPL_XXH128_hash_t to a big endian @ref XRPL_XXH128_canonical_t.
+ * @brief Converts an @ref XXH128_hash_t to a big endian @ref XXH128_canonical_t.
  *
- * @param dst The @ref XRPL_XXH128_canonical_t pointer to be stored to.
- * @param hash The @ref XRPL_XXH128_hash_t to be converted.
+ * @param dst The @ref XXH128_canonical_t pointer to be stored to.
+ * @param hash The @ref XXH128_hash_t to be converted.
  *
  * @pre
  *   @p dst must not be `NULL`.
  */
-XRPL_XXH_PUBLIC_API void XRPL_XXH128_canonicalFromHash(XRPL_XXH_NOESCAPE XRPL_XXH128_canonical_t* dst, XRPL_XXH128_hash_t hash);
+XRPL_XXH_PUBLIC_API void XXH128_canonicalFromHash(XRPL_XXH_NOESCAPE XXH128_canonical_t* dst, XXH128_hash_t hash);
 
 /*!
- * @brief Converts an @ref XRPL_XXH128_canonical_t to a native @ref XRPL_XXH128_hash_t.
+ * @brief Converts an @ref XXH128_canonical_t to a native @ref XXH128_hash_t.
  *
- * @param src The @ref XRPL_XXH128_canonical_t to convert.
+ * @param src The @ref XXH128_canonical_t to convert.
  *
  * @pre
  *   @p src must not be `NULL`.
  *
  * @return The converted hash.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH128_hash_t XRPL_XXH128_hashFromCanonical(XRPL_XXH_NOESCAPE const XRPL_XXH128_canonical_t* src);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH128_hash_t XXH128_hashFromCanonical(XRPL_XXH_NOESCAPE const XXH128_canonical_t* src);
 
 
 #endif  /* !XRPL_XXH_NO_XRPL_XXH3 */
@@ -1438,48 +1433,48 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH128_hash_t XRPL_XXH128_hashFromCanoni
 
 /*!
  * @internal
- * @brief Structure for XRPL_XXH32 streaming API.
+ * @brief Structure for XXH32 streaming API.
  *
  * @note This is only defined when @ref XRPL_XXH_STATIC_LINKING_ONLY,
  * @ref XRPL_XXH_INLINE_ALL, or @ref XRPL_XXH_IMPLEMENTATION is defined. Otherwise it is
  * an opaque type. This allows fields to safely be changed.
  *
- * Typedef'd to @ref XRPL_XXH32_state_t.
+ * Typedef'd to @ref XXH32_state_t.
  * Do not access the members of this struct directly.
- * @see XRPL_XXH64_state_s, XRPL_XXH3_state_s
+ * @see XXH64_state_s, XXH3_state_s
  */
-struct XRPL_XXH32_state_s {
-   XRPL_XXH32_hash_t total_len_32; /*!< Total length hashed, modulo 2^32 */
-   XRPL_XXH32_hash_t large_len;    /*!< Whether the hash is >= 16 (handles @ref total_len_32 overflow) */
-   XRPL_XXH32_hash_t v[4];         /*!< Accumulator lanes */
-   XRPL_XXH32_hash_t mem32[4];     /*!< Internal buffer for partial reads. Treated as unsigned char[16]. */
-   XRPL_XXH32_hash_t memsize;      /*!< Amount of data in @ref mem32 */
-   XRPL_XXH32_hash_t reserved;     /*!< Reserved field. Do not read nor write to it. */
-};   /* typedef'd to XRPL_XXH32_state_t */
+struct XXH32_state_s {
+   XXH32_hash_t total_len_32; /*!< Total length hashed, modulo 2^32 */
+   XXH32_hash_t large_len;    /*!< Whether the hash is >= 16 (handles @ref total_len_32 overflow) */
+   XXH32_hash_t v[4];         /*!< Accumulator lanes */
+   XXH32_hash_t mem32[4];     /*!< Internal buffer for partial reads. Treated as unsigned char[16]. */
+   XXH32_hash_t memsize;      /*!< Amount of data in @ref mem32 */
+   XXH32_hash_t reserved;     /*!< Reserved field. Do not read nor write to it. */
+};   /* typedef'd to XXH32_state_t */
 
 
 #ifndef XRPL_XXH_NO_LONG_LONG  /* defined when there is no 64-bit support */
 
 /*!
  * @internal
- * @brief Structure for XRPL_XXH64 streaming API.
+ * @brief Structure for XXH64 streaming API.
  *
  * @note This is only defined when @ref XRPL_XXH_STATIC_LINKING_ONLY,
  * @ref XRPL_XXH_INLINE_ALL, or @ref XRPL_XXH_IMPLEMENTATION is defined. Otherwise it is
  * an opaque type. This allows fields to safely be changed.
  *
- * Typedef'd to @ref XRPL_XXH64_state_t.
+ * Typedef'd to @ref XXH64_state_t.
  * Do not access the members of this struct directly.
- * @see XRPL_XXH32_state_s, XRPL_XXH3_state_s
+ * @see XXH32_state_s, XXH3_state_s
  */
-struct XRPL_XXH64_state_s {
-   XRPL_XXH64_hash_t total_len;    /*!< Total length hashed. This is always 64-bit. */
-   XRPL_XXH64_hash_t v[4];         /*!< Accumulator lanes */
-   XRPL_XXH64_hash_t mem64[4];     /*!< Internal buffer for partial reads. Treated as unsigned char[32]. */
-   XRPL_XXH32_hash_t memsize;      /*!< Amount of data in @ref mem64 */
-   XRPL_XXH32_hash_t reserved32;   /*!< Reserved field, needed for padding anyways*/
-   XRPL_XXH64_hash_t reserved64;   /*!< Reserved field. Do not read or write to it. */
-};   /* typedef'd to XRPL_XXH64_state_t */
+struct XXH64_state_s {
+   XXH64_hash_t total_len;    /*!< Total length hashed. This is always 64-bit. */
+   XXH64_hash_t v[4];         /*!< Accumulator lanes */
+   XXH64_hash_t mem64[4];     /*!< Internal buffer for partial reads. Treated as unsigned char[32]. */
+   XXH32_hash_t memsize;      /*!< Amount of data in @ref mem64 */
+   XXH32_hash_t reserved32;   /*!< Reserved field, needed for padding anyways*/
+   XXH64_hash_t reserved64;   /*!< Reserved field. Do not read or write to it. */
+};   /* typedef'd to XXH64_state_t */
 
 #ifndef XRPL_XXH_NO_XRPL_XXH3
 
@@ -1538,76 +1533,76 @@ struct XRPL_XXH64_state_s {
  * @note ** This structure has a strict alignment requirement of 64 bytes!! **
  * Do not allocate this with `malloc()` or `new`,
  * it will not be sufficiently aligned.
- * Use @ref XRPL_XXH3_createState() and @ref XRPL_XXH3_freeState(), or stack allocation.
+ * Use @ref XXH3_createState() and @ref XXH3_freeState(), or stack allocation.
  *
- * Typedef'd to @ref XRPL_XXH3_state_t.
+ * Typedef'd to @ref XXH3_state_t.
  * Do never access the members of this struct directly.
  *
  * @see XRPL_XXH3_INITSTATE() for stack initialization.
- * @see XRPL_XXH3_createState(), XRPL_XXH3_freeState().
- * @see XRPL_XXH32_state_s, XRPL_XXH64_state_s
+ * @see XXH3_createState(), XXH3_freeState().
+ * @see XXH32_state_s, XXH64_state_s
  */
-struct XRPL_XXH3_state_s {
-   XRPL_XXH_ALIGN_MEMBER(64, XRPL_XXH64_hash_t acc[8]);
-       /*!< The 8 accumulators. See @ref XRPL_XXH32_state_s::v and @ref XRPL_XXH64_state_s::v */
+struct XXH3_state_s {
+   XRPL_XXH_ALIGN_MEMBER(64, XXH64_hash_t acc[8]);
+       /*!< The 8 accumulators. See @ref XXH32_state_s::v and @ref XXH64_state_s::v */
    XRPL_XXH_ALIGN_MEMBER(64, unsigned char customSecret[XRPL_XXH3_SECRET_DEFAULT_SIZE]);
        /*!< Used to store a custom secret generated from a seed. */
    XRPL_XXH_ALIGN_MEMBER(64, unsigned char buffer[XRPL_XXH3_INTERNALBUFFER_SIZE]);
-       /*!< The internal buffer. @see XRPL_XXH32_state_s::mem32 */
-   XRPL_XXH32_hash_t bufferedSize;
-       /*!< The amount of memory in @ref buffer, @see XRPL_XXH32_state_s::memsize */
-   XRPL_XXH32_hash_t useSeed;
+       /*!< The internal buffer. @see XXH32_state_s::mem32 */
+   XXH32_hash_t bufferedSize;
+       /*!< The amount of memory in @ref buffer, @see XXH32_state_s::memsize */
+   XXH32_hash_t useSeed;
        /*!< Reserved field. Needed for padding on 64-bit. */
    size_t nbStripesSoFar;
        /*!< Number or stripes processed. */
-   XRPL_XXH64_hash_t totalLen;
+   XXH64_hash_t totalLen;
        /*!< Total length hashed. 64-bit even on 32-bit targets. */
    size_t nbStripesPerBlock;
        /*!< Number of stripes per block. */
    size_t secretLimit;
        /*!< Size of @ref customSecret or @ref extSecret */
-   XRPL_XXH64_hash_t seed;
+   XXH64_hash_t seed;
        /*!< Seed for _withSeed variants. Must be zero otherwise, @see XRPL_XXH3_INITSTATE() */
-   XRPL_XXH64_hash_t reserved64;
+   XXH64_hash_t reserved64;
        /*!< Reserved field. */
    const unsigned char* extSecret;
        /*!< Reference to an external secret for the _withSecret variants, NULL
         *   for other variants. */
    /* note: there may be some padding at the end due to alignment on 64 bytes */
-}; /* typedef'd to XRPL_XXH3_state_t */
+}; /* typedef'd to XXH3_state_t */
 
 #undef XRPL_XXH_ALIGN_MEMBER
 
 /*!
- * @brief Initializes a stack-allocated `XRPL_XXH3_state_s`.
+ * @brief Initializes a stack-allocated `XXH3_state_s`.
  *
- * When the @ref XRPL_XXH3_state_t structure is merely emplaced on stack,
+ * When the @ref XXH3_state_t structure is merely emplaced on stack,
  * it should be initialized with XRPL_XXH3_INITSTATE() or a memset()
  * in case its first reset uses XRPL_XXH3_NNbits_reset_withSeed().
  * This init can be omitted if the first reset uses default or _withSecret mode.
- * This operation isn't necessary when the state is created with XRPL_XXH3_createState().
+ * This operation isn't necessary when the state is created with XXH3_createState().
  * Note that this doesn't prepare the state for a streaming operation,
  * it's still necessary to use XRPL_XXH3_NNbits_reset*() afterwards.
  */
 #define XRPL_XXH3_INITSTATE(XRPL_XXH3_state_ptr)                       \
     do {                                                     \
-        XRPL_XXH3_state_t* tmp_xxh3_state_ptr = (XRPL_XXH3_state_ptr); \
+        XXH3_state_t* tmp_xxh3_state_ptr = (XRPL_XXH3_state_ptr); \
         tmp_xxh3_state_ptr->seed = 0;                        \
         tmp_xxh3_state_ptr->extSecret = NULL;                \
     } while(0)
 
 
 /*!
- * simple alias to pre-selected XRPL_XXH3_128bits variant
+ * simple alias to pre-selected XXH3_128bits variant
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH128_hash_t XRPL_XXH128(XRPL_XXH_NOESCAPE const void* data, size_t len, XRPL_XXH64_hash_t seed);
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH128_hash_t XXH128(XRPL_XXH_NOESCAPE const void* data, size_t len, XXH64_hash_t seed);
 
 
 /* ===   Experimental API   === */
 /* Symbols defined below must be considered tied to a specific library version. */
 
 /*!
- * XRPL_XXH3_generateSecret():
+ * XXH3_generateSecret():
  *
  * Derive a high-entropy secret from any user-defined content, named customSeed.
  * The generated secret can be used in combination with `*_withSecret()` functions.
@@ -1620,12 +1615,12 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH128_hash_t XRPL_XXH128(XRPL_XXH_NOESC
  * already allocated buffer @p secretBuffer.
  *
  * The generated secret can then be used with any `*_withSecret()` variant.
- * The functions @ref XRPL_XXH3_128bits_withSecret(), @ref XRPL_XXH3_64bits_withSecret(),
- * @ref XRPL_XXH3_128bits_reset_withSecret() and @ref XRPL_XXH3_64bits_reset_withSecret()
+ * The functions @ref XXH3_128bits_withSecret(), @ref XXH3_64bits_withSecret(),
+ * @ref XXH3_128bits_reset_withSecret() and @ref XXH3_64bits_reset_withSecret()
  * are part of this list. They all accept a `secret` parameter
  * which must be large enough for implementation reasons (>= @ref XRPL_XXH3_SECRET_SIZE_MIN)
  * _and_ feature very high entropy (consist of random-looking bytes).
- * These conditions can be a high bar to meet, so @ref XRPL_XXH3_generateSecret() can
+ * These conditions can be a high bar to meet, so @ref XXH3_generateSecret() can
  * be employed to ensure proper quality.
  *
  * @p customSeed can be anything. It can have any size, even small ones,
@@ -1648,8 +1643,8 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH128_hash_t XRPL_XXH128(XRPL_XXH_NOESC
  *    {
  *        char secret[XRPL_XXH3_SECRET_SIZE_MIN];
  *        if (argv != 3) { return 1; }
- *        XRPL_XXH3_generateSecret(secret, sizeof(secret), argv[1], strlen(argv[1]));
- *        XRPL_XXH64_hash_t h = XRPL_XXH3_64bits_withSecret(
+ *        XXH3_generateSecret(secret, sizeof(secret), argv[1], strlen(argv[1]));
+ *        XXH64_hash_t h = XXH3_64bits_withSecret(
  *             argv[2], strlen(argv[2]),
  *             secret, sizeof(secret)
  *        );
@@ -1657,7 +1652,7 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH128_hash_t XRPL_XXH128(XRPL_XXH_NOESC
  *    }
  * @endcode
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_generateSecret(XRPL_XXH_NOESCAPE void* secretBuffer, size_t secretSize, XRPL_XXH_NOESCAPE const void* customSeed, size_t customSeedSize);
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH3_generateSecret(XRPL_XXH_NOESCAPE void* secretBuffer, size_t secretSize, XRPL_XXH_NOESCAPE const void* customSeed, size_t customSeedSize);
 
 /*!
  * @brief Generate the same secret as the _withSeed() variants.
@@ -1672,23 +1667,23 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_generateSecret(XRPL_XXH_NOESCAP
  *    #include "xxhash.h"
  *    // Slow, seeds each time
  *    class HashSlow {
- *        XRPL_XXH64_hash_t seed;
+ *        XXH64_hash_t seed;
  *    public:
- *        HashSlow(XRPL_XXH64_hash_t s) : seed{s} {}
+ *        HashSlow(XXH64_hash_t s) : seed{s} {}
  *        size_t operator()(const std::string& x) const {
- *            return size_t{XRPL_XXH3_64bits_withSeed(x.c_str(), x.length(), seed)};
+ *            return size_t{XXH3_64bits_withSeed(x.c_str(), x.length(), seed)};
  *        }
  *    };
  *    // Fast, caches the seeded secret for future uses.
  *    class HashFast {
  *        unsigned char secret[XRPL_XXH3_SECRET_SIZE_MIN];
  *    public:
- *        HashFast(XRPL_XXH64_hash_t s) {
- *            XRPL_XXH3_generateSecret_fromSeed(secret, seed);
+ *        HashFast(XXH64_hash_t s) {
+ *            XXH3_generateSecret_fromSeed(secret, seed);
  *        }
  *        size_t operator()(const std::string& x) const {
  *            return size_t{
- *                XRPL_XXH3_64bits_withSecret(x.c_str(), x.length(), secret, sizeof(secret))
+ *                XXH3_64bits_withSecret(x.c_str(), x.length(), secret, sizeof(secret))
  *            };
  *        }
  *    };
@@ -1696,7 +1691,7 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_generateSecret(XRPL_XXH_NOESCAP
  * @param secretBuffer A writable buffer of @ref XRPL_XXH3_SECRET_SIZE_MIN bytes
  * @param seed The seed to seed the state.
  */
-XRPL_XXH_PUBLIC_API void XRPL_XXH3_generateSecret_fromSeed(XRPL_XXH_NOESCAPE void* secretBuffer, XRPL_XXH64_hash_t seed);
+XRPL_XXH_PUBLIC_API void XXH3_generateSecret_fromSeed(XRPL_XXH_NOESCAPE void* secretBuffer, XXH64_hash_t seed);
 
 /*!
  * These variants generate hash values using either
@@ -1710,13 +1705,13 @@ XRPL_XXH_PUBLIC_API void XRPL_XXH3_generateSecret_fromSeed(XRPL_XXH_NOESCAPE voi
  * which requires more instructions than _withSeed() variants.
  * Therefore, _withSecretandSeed variant combines the best of both worlds.
  *
- * When @p secret has been generated by XRPL_XXH3_generateSecret_fromSeed(),
+ * When @p secret has been generated by XXH3_generateSecret_fromSeed(),
  * this variant produces *exactly* the same results as `_withSeed()` variant,
  * hence offering only a pure speed benefit on "large" input,
  * by skipping the need to regenerate the secret for every large input.
  *
  * Another usage scenario is to hash the secret to a 64-bit hash value,
- * for example with XRPL_XXH3_64bits(), which then becomes the seed,
+ * for example with XXH3_64bits(), which then becomes the seed,
  * and then employ both the seed and the secret in _withSecretandSeed().
  * On top of speed, an added benefit is that each bit in the secret
  * has a 50% chance to swap each bit in the output, via its impact to the seed.
@@ -1724,26 +1719,26 @@ XRPL_XXH_PUBLIC_API void XRPL_XXH3_generateSecret_fromSeed(XRPL_XXH_NOESCAPE voi
  * This is not guaranteed when using the secret directly in "small data" scenarios,
  * because only portions of the secret are employed for small data.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH64_hash_t
-XRPL_XXH3_64bits_withSecretandSeed(XRPL_XXH_NOESCAPE const void* data, size_t len,
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH64_hash_t
+XXH3_64bits_withSecretandSeed(XRPL_XXH_NOESCAPE const void* data, size_t len,
                               XRPL_XXH_NOESCAPE const void* secret, size_t secretSize,
-                              XRPL_XXH64_hash_t seed);
-/*! @copydoc XRPL_XXH3_64bits_withSecretandSeed() */
-XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XRPL_XXH128_hash_t
-XRPL_XXH3_128bits_withSecretandSeed(XRPL_XXH_NOESCAPE const void* input, size_t length,
+                              XXH64_hash_t seed);
+/*! @copydoc XXH3_64bits_withSecretandSeed() */
+XRPL_XXH_PUBLIC_API XRPL_XXH_PUREF XXH128_hash_t
+XXH3_128bits_withSecretandSeed(XRPL_XXH_NOESCAPE const void* input, size_t length,
                                XRPL_XXH_NOESCAPE const void* secret, size_t secretSize,
-                               XRPL_XXH64_hash_t seed64);
+                               XXH64_hash_t seed64);
 #ifndef XRPL_XXH_NO_STREAM
-/*! @copydoc XRPL_XXH3_64bits_withSecretandSeed() */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_64bits_reset_withSecretandSeed(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr,
+/*! @copydoc XXH3_64bits_withSecretandSeed() */
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_64bits_reset_withSecretandSeed(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr,
                                     XRPL_XXH_NOESCAPE const void* secret, size_t secretSize,
-                                    XRPL_XXH64_hash_t seed64);
-/*! @copydoc XRPL_XXH3_64bits_withSecretandSeed() */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_128bits_reset_withSecretandSeed(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr,
+                                    XXH64_hash_t seed64);
+/*! @copydoc XXH3_64bits_withSecretandSeed() */
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_128bits_reset_withSecretandSeed(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr,
                                      XRPL_XXH_NOESCAPE const void* secret, size_t secretSize,
-                                     XRPL_XXH64_hash_t seed64);
+                                     XXH64_hash_t seed64);
 #endif /* !XRPL_XXH_NO_STREAM */
 
 #endif  /* !XRPL_XXH_NO_XRPL_XXH3 */
@@ -1886,8 +1881,8 @@ XRPL_XXH3_128bits_reset_withSecretandSeed(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* s
 
 /*!
  * @def XRPL_XXH_FORCE_ALIGN_CHECK
- * @brief If defined to non-zero, adds a special path for aligned inputs (XRPL_XXH32()
- * and XRPL_XXH64() only).
+ * @brief If defined to non-zero, adds a special path for aligned inputs (XXH32()
+ * and XXH64() only).
  *
  * This is an important performance trick for architectures without decent
  * unaligned memory access performance.
@@ -1910,7 +1905,7 @@ XRPL_XXH3_128bits_reset_withSecretandSeed(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* s
  *
  * It is also disabled by default when @ref XRPL_XXH_SIZE_OPT >= 1.
  *
- * This option does not affect XRPL_XXH3 (only XRPL_XXH32 and XRPL_XXH64).
+ * This option does not affect XRPL_XXH3 (only XXH32 and XXH64).
  */
 #  define XRPL_XXH_FORCE_ALIGN_CHECK 0
 
@@ -1941,7 +1936,7 @@ XRPL_XXH3_128bits_reset_withSecretandSeed(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* s
  * @brief Determines whether to inline the XRPL_XXH3 withSecret code.
  *
  * When the secret size is known, the compiler can improve the performance
- * of XRPL_XXH3_64bits_withSecret() and XRPL_XXH3_128bits_withSecret().
+ * of XXH3_64bits_withSecret() and XXH3_128bits_withSecret().
  *
  * However, if the secret size is not known, it doesn't have any benefit. This
  * happens when xxHash is compiled into a global symbol. Therefore, if
@@ -2222,7 +2217,7 @@ static void* XRPL_XXH_memcpy(void* dest, const void* src, size_t size)
 #else
   typedef unsigned char xxh_u8;
 #endif
-typedef XRPL_XXH32_hash_t xxh_u32;
+typedef XXH32_hash_t xxh_u32;
 
 #ifdef XRPL_XXH_OLD_NAMES
 #  warning "XRPL_XXH_OLD_NAMES is planned to be removed starting v0.9. If the program depends on it, consider moving away from it by employing newer type names directly"
@@ -2553,7 +2548,7 @@ XRPL_XXH_readLE32_align(const void* ptr, XRPL_XXH_alignment align)
 *  Misc
 ***************************************/
 /*! @ingroup public */
-XRPL_XXH_PUBLIC_API unsigned XRPL_XXH_versionNumber (void) { return XRPL_XXH_VERSION_NUMBER; }
+XRPL_XXH_PUBLIC_API unsigned XXH_versionNumber (void) { return XRPL_XXH_VERSION_NUMBER; }
 
 
 /* *******************************************************************
@@ -2561,10 +2556,10 @@ XRPL_XXH_PUBLIC_API unsigned XRPL_XXH_versionNumber (void) { return XRPL_XXH_VER
 *********************************************************************/
 /*!
  * @}
- * @defgroup XRPL_XXH32_impl XRPL_XXH32 implementation
+ * @defgroup XRPL_XXH32_impl XXH32 implementation
  * @ingroup impl
  *
- * Details on the XRPL_XXH32 implementation.
+ * Details on the XXH32 implementation.
  * @{
  */
  /* #define instead of static const, to be used as initializers */
@@ -2602,11 +2597,11 @@ static xxh_u32 XRPL_XXH32_round(xxh_u32 acc, xxh_u32 input)
     /*
      * UGLY HACK:
      * A compiler fence is the only thing that prevents GCC and Clang from
-     * autovectorizing the XRPL_XXH32 loop (pragmas and attributes don't work for some
+     * autovectorizing the XXH32 loop (pragmas and attributes don't work for some
      * reason) without globally disabling SSE4.1.
      *
      * The reason we want to avoid vectorization is because despite working on
-     * 4 integers at a time, there are multiple factors slowing XRPL_XXH32 down on
+     * 4 integers at a time, there are multiple factors slowing XXH32 down on
      * SSE4:
      * - There's a ridiculous amount of lag from pmulld (10 cycles of latency on
      *   newer chips!) making it slightly slower to multiply four integers at
@@ -2760,9 +2755,9 @@ XRPL_XXH32_finalize(xxh_u32 hash, const xxh_u8* ptr, size_t len, XRPL_XXH_alignm
 
 /*!
  * @internal
- * @brief The implementation for @ref XRPL_XXH32().
+ * @brief The implementation for @ref XXH32().
  *
- * @param input , len , seed Directly passed from @ref XRPL_XXH32().
+ * @param input , len , seed Directly passed from @ref XXH32().
  * @param align Whether @p input is aligned.
  * @return The calculated hash.
  */
@@ -2800,14 +2795,14 @@ XRPL_XXH32_endian_align(const xxh_u8* input, size_t len, xxh_u32 seed, XRPL_XXH_
 }
 
 /*! @ingroup XRPL_XXH32_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH32_hash_t XRPL_XXH32 (const void* input, size_t len, XRPL_XXH32_hash_t seed)
+XRPL_XXH_PUBLIC_API XXH32_hash_t XXH32 (const void* input, size_t len, XXH32_hash_t seed)
 {
 #if !defined(XRPL_XXH_NO_STREAM) && XRPL_XXH_SIZE_OPT >= 2
     /* Simple version, good for code maintenance, but unfortunately slow for small inputs */
-    XRPL_XXH32_state_t state;
-    XRPL_XXH32_reset(&state, seed);
-    XRPL_XXH32_update(&state, (const xxh_u8*)input, len);
-    return XRPL_XXH32_digest(&state);
+    XXH32_state_t state;
+    XXH32_reset(&state, seed);
+    XXH32_update(&state, (const xxh_u8*)input, len);
+    return XXH32_digest(&state);
 #else
     if (XRPL_XXH_FORCE_ALIGN_CHECK) {
         if ((((size_t)input) & 3) == 0) {   /* Input is 4-bytes aligned, leverage the speed benefit */
@@ -2823,25 +2818,25 @@ XRPL_XXH_PUBLIC_API XRPL_XXH32_hash_t XRPL_XXH32 (const void* input, size_t len,
 /*******   Hash streaming   *******/
 #ifndef XRPL_XXH_NO_STREAM
 /*! @ingroup XRPL_XXH32_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH32_state_t* XRPL_XXH32_createState(void)
+XRPL_XXH_PUBLIC_API XXH32_state_t* XXH32_createState(void)
 {
-    return (XRPL_XXH32_state_t*)XRPL_XXH_malloc(sizeof(XRPL_XXH32_state_t));
+    return (XXH32_state_t*)XRPL_XXH_malloc(sizeof(XXH32_state_t));
 }
 /*! @ingroup XRPL_XXH32_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH32_freeState(XRPL_XXH32_state_t* statePtr)
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH32_freeState(XXH32_state_t* statePtr)
 {
     XRPL_XXH_free(statePtr);
-    return XRPL_XXH_OK;
+    return XXH_OK;
 }
 
 /*! @ingroup XRPL_XXH32_family */
-XRPL_XXH_PUBLIC_API void XRPL_XXH32_copyState(XRPL_XXH32_state_t* dstState, const XRPL_XXH32_state_t* srcState)
+XRPL_XXH_PUBLIC_API void XXH32_copyState(XXH32_state_t* dstState, const XXH32_state_t* srcState)
 {
     XRPL_XXH_memcpy(dstState, srcState, sizeof(*dstState));
 }
 
 /*! @ingroup XRPL_XXH32_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH32_reset(XRPL_XXH32_state_t* statePtr, XRPL_XXH32_hash_t seed)
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH32_reset(XXH32_state_t* statePtr, XXH32_hash_t seed)
 {
     XRPL_XXH_ASSERT(statePtr != NULL);
     memset(statePtr, 0, sizeof(*statePtr));
@@ -2849,29 +2844,29 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH32_reset(XRPL_XXH32_state_t* stat
     statePtr->v[1] = seed + XRPL_XXH_PRIME32_2;
     statePtr->v[2] = seed + 0;
     statePtr->v[3] = seed - XRPL_XXH_PRIME32_1;
-    return XRPL_XXH_OK;
+    return XXH_OK;
 }
 
 
 /*! @ingroup XRPL_XXH32_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH32_update(XRPL_XXH32_state_t* state, const void* input, size_t len)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH32_update(XXH32_state_t* state, const void* input, size_t len)
 {
     if (input==NULL) {
         XRPL_XXH_ASSERT(len == 0);
-        return XRPL_XXH_OK;
+        return XXH_OK;
     }
 
     {   const xxh_u8* p = (const xxh_u8*)input;
         const xxh_u8* const bEnd = p + len;
 
-        state->total_len_32 += (XRPL_XXH32_hash_t)len;
-        state->large_len |= (XRPL_XXH32_hash_t)((len>=16) | (state->total_len_32>=16));
+        state->total_len_32 += (XXH32_hash_t)len;
+        state->large_len |= (XXH32_hash_t)((len>=16) | (state->total_len_32>=16));
 
         if (state->memsize + len < 16)  {   /* fill in tmp buffer */
             XRPL_XXH_memcpy((xxh_u8*)(state->mem32) + state->memsize, input, len);
-            state->memsize += (XRPL_XXH32_hash_t)len;
-            return XRPL_XXH_OK;
+            state->memsize += (XXH32_hash_t)len;
+            return XXH_OK;
         }
 
         if (state->memsize) {   /* some data left from previous update */
@@ -2904,12 +2899,12 @@ XRPL_XXH32_update(XRPL_XXH32_state_t* state, const void* input, size_t len)
         }
     }
 
-    return XRPL_XXH_OK;
+    return XXH_OK;
 }
 
 
 /*! @ingroup XRPL_XXH32_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH32_hash_t XRPL_XXH32_digest(const XRPL_XXH32_state_t* state)
+XRPL_XXH_PUBLIC_API XXH32_hash_t XXH32_digest(const XXH32_state_t* state)
 {
     xxh_u32 h32;
 
@@ -2944,14 +2939,14 @@ XRPL_XXH_PUBLIC_API XRPL_XXH32_hash_t XRPL_XXH32_digest(const XRPL_XXH32_state_t
  * The following functions allow transformation of hash values to and from their
  * canonical format.
  */
-XRPL_XXH_PUBLIC_API void XRPL_XXH32_canonicalFromHash(XRPL_XXH32_canonical_t* dst, XRPL_XXH32_hash_t hash)
+XRPL_XXH_PUBLIC_API void XXH32_canonicalFromHash(XXH32_canonical_t* dst, XXH32_hash_t hash)
 {
-    XRPL_XXH_STATIC_ASSERT(sizeof(XRPL_XXH32_canonical_t) == sizeof(XRPL_XXH32_hash_t));
+    XRPL_XXH_STATIC_ASSERT(sizeof(XXH32_canonical_t) == sizeof(XXH32_hash_t));
     if (XRPL_XXH_CPU_LITTLE_ENDIAN) hash = XRPL_XXH_swap32(hash);
     XRPL_XXH_memcpy(dst, &hash, sizeof(*dst));
 }
 /*! @ingroup XRPL_XXH32_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH32_hash_t XRPL_XXH32_hashFromCanonical(const XRPL_XXH32_canonical_t* src)
+XRPL_XXH_PUBLIC_API XXH32_hash_t XXH32_hashFromCanonical(const XXH32_canonical_t* src)
 {
     return XRPL_XXH_readBE32(src);
 }
@@ -2969,7 +2964,7 @@ XRPL_XXH_PUBLIC_API XRPL_XXH32_hash_t XRPL_XXH32_hashFromCanonical(const XRPL_XX
  */
 /*******   Memory access   *******/
 
-typedef XRPL_XXH64_hash_t xxh_u64;
+typedef XXH64_hash_t xxh_u64;
 
 #ifdef XRPL_XXH_OLD_NAMES
 #  define U64 xxh_u64
@@ -3094,10 +3089,10 @@ XRPL_XXH_readLE64_align(const void* ptr, XRPL_XXH_alignment align)
 /*******   xxh64   *******/
 /*!
  * @}
- * @defgroup XRPL_XXH64_impl XRPL_XXH64 implementation
+ * @defgroup XRPL_XXH64_impl XXH64 implementation
  * @ingroup impl
  *
- * Details on the XRPL_XXH64 implementation.
+ * Details on the XXH64 implementation.
  * @{
  */
 /* #define rather that static const, to be used as initializers */
@@ -3199,9 +3194,9 @@ XRPL_XXH64_finalize(xxh_u64 hash, const xxh_u8* ptr, size_t len, XRPL_XXH_alignm
 
 /*!
  * @internal
- * @brief The implementation for @ref XRPL_XXH64().
+ * @brief The implementation for @ref XXH64().
  *
- * @param input , len , seed Directly passed from @ref XRPL_XXH64().
+ * @param input , len , seed Directly passed from @ref XXH64().
  * @param align Whether @p input is aligned.
  * @return The calculated hash.
  */
@@ -3243,14 +3238,14 @@ XRPL_XXH64_endian_align(const xxh_u8* input, size_t len, xxh_u64 seed, XRPL_XXH_
 
 
 /*! @ingroup XRPL_XXH64_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t XRPL_XXH64 (XRPL_XXH_NOESCAPE const void* input, size_t len, XRPL_XXH64_hash_t seed)
+XRPL_XXH_PUBLIC_API XXH64_hash_t XXH64 (XRPL_XXH_NOESCAPE const void* input, size_t len, XXH64_hash_t seed)
 {
 #if !defined(XRPL_XXH_NO_STREAM) && XRPL_XXH_SIZE_OPT >= 2
     /* Simple version, good for code maintenance, but unfortunately slow for small inputs */
-    XRPL_XXH64_state_t state;
-    XRPL_XXH64_reset(&state, seed);
-    XRPL_XXH64_update(&state, (const xxh_u8*)input, len);
-    return XRPL_XXH64_digest(&state);
+    XXH64_state_t state;
+    XXH64_reset(&state, seed);
+    XXH64_update(&state, (const xxh_u8*)input, len);
+    return XXH64_digest(&state);
 #else
     if (XRPL_XXH_FORCE_ALIGN_CHECK) {
         if ((((size_t)input) & 7)==0) {  /* Input is aligned, let's leverage the speed advantage */
@@ -3265,25 +3260,25 @@ XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t XRPL_XXH64 (XRPL_XXH_NOESCAPE const void* 
 /*******   Hash Streaming   *******/
 #ifndef XRPL_XXH_NO_STREAM
 /*! @ingroup XRPL_XXH64_family*/
-XRPL_XXH_PUBLIC_API XRPL_XXH64_state_t* XRPL_XXH64_createState(void)
+XRPL_XXH_PUBLIC_API XXH64_state_t* XXH64_createState(void)
 {
-    return (XRPL_XXH64_state_t*)XRPL_XXH_malloc(sizeof(XRPL_XXH64_state_t));
+    return (XXH64_state_t*)XRPL_XXH_malloc(sizeof(XXH64_state_t));
 }
 /*! @ingroup XRPL_XXH64_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH64_freeState(XRPL_XXH64_state_t* statePtr)
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH64_freeState(XXH64_state_t* statePtr)
 {
     XRPL_XXH_free(statePtr);
-    return XRPL_XXH_OK;
+    return XXH_OK;
 }
 
 /*! @ingroup XRPL_XXH64_family */
-XRPL_XXH_PUBLIC_API void XRPL_XXH64_copyState(XRPL_XXH_NOESCAPE XRPL_XXH64_state_t* dstState, const XRPL_XXH64_state_t* srcState)
+XRPL_XXH_PUBLIC_API void XXH64_copyState(XRPL_XXH_NOESCAPE XXH64_state_t* dstState, const XXH64_state_t* srcState)
 {
     XRPL_XXH_memcpy(dstState, srcState, sizeof(*dstState));
 }
 
 /*! @ingroup XRPL_XXH64_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH64_reset(XRPL_XXH_NOESCAPE XRPL_XXH64_state_t* statePtr, XRPL_XXH64_hash_t seed)
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH64_reset(XRPL_XXH_NOESCAPE XXH64_state_t* statePtr, XXH64_hash_t seed)
 {
     XRPL_XXH_ASSERT(statePtr != NULL);
     memset(statePtr, 0, sizeof(*statePtr));
@@ -3291,16 +3286,16 @@ XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH64_reset(XRPL_XXH_NOESCAPE XRPL_X
     statePtr->v[1] = seed + XRPL_XXH_PRIME64_2;
     statePtr->v[2] = seed + 0;
     statePtr->v[3] = seed - XRPL_XXH_PRIME64_1;
-    return XRPL_XXH_OK;
+    return XXH_OK;
 }
 
 /*! @ingroup XRPL_XXH64_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH64_update (XRPL_XXH_NOESCAPE XRPL_XXH64_state_t* state, XRPL_XXH_NOESCAPE const void* input, size_t len)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH64_update (XRPL_XXH_NOESCAPE XXH64_state_t* state, XRPL_XXH_NOESCAPE const void* input, size_t len)
 {
     if (input==NULL) {
         XRPL_XXH_ASSERT(len == 0);
-        return XRPL_XXH_OK;
+        return XXH_OK;
     }
 
     {   const xxh_u8* p = (const xxh_u8*)input;
@@ -3311,7 +3306,7 @@ XRPL_XXH64_update (XRPL_XXH_NOESCAPE XRPL_XXH64_state_t* state, XRPL_XXH_NOESCAP
         if (state->memsize + len < 32) {  /* fill in tmp buffer */
             XRPL_XXH_memcpy(((xxh_u8*)state->mem64) + state->memsize, input, len);
             state->memsize += (xxh_u32)len;
-            return XRPL_XXH_OK;
+            return XXH_OK;
         }
 
         if (state->memsize) {   /* tmp buffer is full */
@@ -3342,12 +3337,12 @@ XRPL_XXH64_update (XRPL_XXH_NOESCAPE XRPL_XXH64_state_t* state, XRPL_XXH_NOESCAP
         }
     }
 
-    return XRPL_XXH_OK;
+    return XXH_OK;
 }
 
 
 /*! @ingroup XRPL_XXH64_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t XRPL_XXH64_digest(XRPL_XXH_NOESCAPE const XRPL_XXH64_state_t* state)
+XRPL_XXH_PUBLIC_API XXH64_hash_t XXH64_digest(XRPL_XXH_NOESCAPE const XXH64_state_t* state)
 {
     xxh_u64 h64;
 
@@ -3370,15 +3365,15 @@ XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t XRPL_XXH64_digest(XRPL_XXH_NOESCAPE const 
 /******* Canonical representation   *******/
 
 /*! @ingroup XRPL_XXH64_family */
-XRPL_XXH_PUBLIC_API void XRPL_XXH64_canonicalFromHash(XRPL_XXH_NOESCAPE XRPL_XXH64_canonical_t* dst, XRPL_XXH64_hash_t hash)
+XRPL_XXH_PUBLIC_API void XXH64_canonicalFromHash(XRPL_XXH_NOESCAPE XXH64_canonical_t* dst, XXH64_hash_t hash)
 {
-    XRPL_XXH_STATIC_ASSERT(sizeof(XRPL_XXH64_canonical_t) == sizeof(XRPL_XXH64_hash_t));
+    XRPL_XXH_STATIC_ASSERT(sizeof(XXH64_canonical_t) == sizeof(XXH64_hash_t));
     if (XRPL_XXH_CPU_LITTLE_ENDIAN) hash = XRPL_XXH_swap64(hash);
     XRPL_XXH_memcpy(dst, &hash, sizeof(*dst));
 }
 
 /*! @ingroup XRPL_XXH64_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t XRPL_XXH64_hashFromCanonical(XRPL_XXH_NOESCAPE const XRPL_XXH64_canonical_t* src)
+XRPL_XXH_PUBLIC_API XXH64_hash_t XXH64_hashFromCanonical(XRPL_XXH_NOESCAPE const XXH64_canonical_t* src)
 {
     return XRPL_XXH_readBE64(src);
 }
@@ -3495,8 +3490,8 @@ XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t XRPL_XXH64_hashFromCanonical(XRPL_XXH_NOES
  *  - A 32 or 64-bit multiply with a 64-bit result
  *  - For the 128-bit variant, a decent byteswap helps short inputs.
  *
- * The first two are already required by XRPL_XXH32, and almost all 32-bit and 64-bit
- * platforms which can run XRPL_XXH32 can run XRPL_XXH3 efficiently.
+ * The first two are already required by XXH32, and almost all 32-bit and 64-bit
+ * platforms which can run XXH32 can run XRPL_XXH3 efficiently.
  *
  * Thumb-1, the classic 16-bit only subset of ARM's instruction set, is one
  * notable exception.
@@ -4047,9 +4042,9 @@ XRPL_XXH_mult32to64(xxh_u64 x, xxh_u64 y)
  * version.
  *
  * @param lhs , rhs The 64-bit integers to be multiplied
- * @return The 128-bit result represented in an @ref XRPL_XXH128_hash_t.
+ * @return The 128-bit result represented in an @ref XXH128_hash_t.
  */
-static XRPL_XXH128_hash_t
+static XXH128_hash_t
 XRPL_XXH_mult64to128(xxh_u64 lhs, xxh_u64 rhs)
 {
     /*
@@ -4072,7 +4067,7 @@ XRPL_XXH_mult64to128(xxh_u64 lhs, xxh_u64 rhs)
     || (defined(_INTEGRAL_MAX_BITS) && _INTEGRAL_MAX_BITS >= 128)
 
     __uint128_t const product = (__uint128_t)lhs * (__uint128_t)rhs;
-    XRPL_XXH128_hash_t r128;
+    XXH128_hash_t r128;
     r128.low64  = (xxh_u64)(product);
     r128.high64 = (xxh_u64)(product >> 64);
     return r128;
@@ -4091,7 +4086,7 @@ XRPL_XXH_mult64to128(xxh_u64 lhs, xxh_u64 rhs)
 #endif
     xxh_u64 product_high;
     xxh_u64 const product_low = _umul128(lhs, rhs, &product_high);
-    XRPL_XXH128_hash_t r128;
+    XXH128_hash_t r128;
     r128.low64  = product_low;
     r128.high64 = product_high;
     return r128;
@@ -4106,7 +4101,7 @@ XRPL_XXH_mult64to128(xxh_u64 lhs, xxh_u64 rhs)
 #ifndef _MSC_VER
 #   pragma intrinsic(__umulh)
 #endif
-    XRPL_XXH128_hash_t r128;
+    XXH128_hash_t r128;
     r128.low64  = lhs * rhs;
     r128.high64 = __umulh(lhs, rhs);
     return r128;
@@ -4166,7 +4161,7 @@ XRPL_XXH_mult64to128(xxh_u64 lhs, xxh_u64 rhs)
     xxh_u64 const upper = (hi_lo >> 32) + (cross >> 32)        + hi_hi;
     xxh_u64 const lower = (cross << 32) | (lo_lo & 0xFFFFFFFF);
 
-    XRPL_XXH128_hash_t r128;
+    XXH128_hash_t r128;
     r128.low64  = lower;
     r128.high64 = upper;
     return r128;
@@ -4186,7 +4181,7 @@ XRPL_XXH_mult64to128(xxh_u64 lhs, xxh_u64 rhs)
 static xxh_u64
 XRPL_XXH3_mul128_fold64(xxh_u64 lhs, xxh_u64 rhs)
 {
-    XRPL_XXH128_hash_t product = XRPL_XXH_mult64to128(lhs, rhs);
+    XXH128_hash_t product = XRPL_XXH_mult64to128(lhs, rhs);
     return product.low64 ^ product.high64;
 }
 
@@ -4201,7 +4196,7 @@ XRPL_XXH_FORCE_INLINE XRPL_XXH_CONSTF xxh_u64 XRPL_XXH_xorshift64(xxh_u64 v64, i
  * This is a fast avalanche stage,
  * suitable when input bits are already partially mixed
  */
-static XRPL_XXH64_hash_t XRPL_XXH3_avalanche(xxh_u64 h64)
+static XXH64_hash_t XRPL_XXH3_avalanche(xxh_u64 h64)
 {
     h64 = XRPL_XXH_xorshift64(h64, 37);
     h64 *= PRIME_MX1;
@@ -4214,7 +4209,7 @@ static XRPL_XXH64_hash_t XRPL_XXH3_avalanche(xxh_u64 h64)
  * inspired by Pelle Evensen's rrmxmx
  * preferable when input has not been previously mixed
  */
-static XRPL_XXH64_hash_t XRPL_XXH3_rrmxmx(xxh_u64 h64, xxh_u64 len)
+static XXH64_hash_t XRPL_XXH3_rrmxmx(xxh_u64 h64, xxh_u64 len)
 {
     /* this mix is inspired by Pelle Evensen's rrmxmx */
     h64 ^= XRPL_XXH_rotl64(h64, 49) ^ XRPL_XXH_rotl64(h64, 24);
@@ -4228,7 +4223,7 @@ static XRPL_XXH64_hash_t XRPL_XXH3_rrmxmx(xxh_u64 h64, xxh_u64 len)
 /* ==========================================
  * Short keys
  * ==========================================
- * One of the shortcomings of XRPL_XXH32 and XRPL_XXH64 was that their performance was
+ * One of the shortcomings of XXH32 and XXH64 was that their performance was
  * sub-optimal on short lengths. It used an iterative algorithm which strongly
  * favored lengths that were a multiple of 4 or 8.
  *
@@ -4238,8 +4233,8 @@ static XRPL_XXH64_hash_t XRPL_XXH3_rrmxmx(xxh_u64 h64, xxh_u64 len)
  * Additionally, the number of multiplies has been significantly reduced. This
  * reduces latency, especially when emulating 64-bit multiplies on 32-bit.
  *
- * Depending on the platform, this may or may not be faster than XRPL_XXH32, but it
- * is almost guaranteed to be faster than XRPL_XXH64.
+ * Depending on the platform, this may or may not be faster than XXH32, but it
+ * is almost guaranteed to be faster than XXH64.
  */
 
 /*
@@ -4258,8 +4253,8 @@ static XRPL_XXH64_hash_t XRPL_XXH3_rrmxmx(xxh_u64 h64, xxh_u64 len)
  *
  * This adds an extra layer of strength for custom secrets.
  */
-XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XRPL_XXH64_hash_t
-XRPL_XXH3_len_1to3_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XRPL_XXH64_hash_t seed)
+XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XXH64_hash_t
+XRPL_XXH3_len_1to3_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
     XRPL_XXH_ASSERT(input != NULL);
     XRPL_XXH_ASSERT(1 <= len && len <= 3);
@@ -4280,8 +4275,8 @@ XRPL_XXH3_len_1to3_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XR
     }
 }
 
-XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XRPL_XXH64_hash_t
-XRPL_XXH3_len_4to8_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XRPL_XXH64_hash_t seed)
+XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XXH64_hash_t
+XRPL_XXH3_len_4to8_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
     XRPL_XXH_ASSERT(input != NULL);
     XRPL_XXH_ASSERT(secret != NULL);
@@ -4296,8 +4291,8 @@ XRPL_XXH3_len_4to8_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XR
     }
 }
 
-XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XRPL_XXH64_hash_t
-XRPL_XXH3_len_9to16_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XRPL_XXH64_hash_t seed)
+XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XXH64_hash_t
+XRPL_XXH3_len_9to16_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
     XRPL_XXH_ASSERT(input != NULL);
     XRPL_XXH_ASSERT(secret != NULL);
@@ -4313,8 +4308,8 @@ XRPL_XXH3_len_9to16_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, X
     }
 }
 
-XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XRPL_XXH64_hash_t
-XRPL_XXH3_len_0to16_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XRPL_XXH64_hash_t seed)
+XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XXH64_hash_t
+XRPL_XXH3_len_0to16_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
     XRPL_XXH_ASSERT(len <= 16);
     {   if (XRPL_XXH_likely(len >  8)) return XRPL_XXH3_len_9to16_64b(input, len, secret, seed);
@@ -4330,7 +4325,7 @@ XRPL_XXH3_len_0to16_64b(const xxh_u8* input, size_t len, const xxh_u8* secret, X
  *
  * However, they are very unlikely.
  *
- * Keep this in mind when using the unseeded XRPL_XXH3_64bits() variant: As with all
+ * Keep this in mind when using the unseeded XXH3_64bits() variant: As with all
  * unseeded non-cryptographic hashes, it does not attempt to defend itself
  * against specially crafted inputs, only random inputs.
  *
@@ -4355,7 +4350,7 @@ XRPL_XXH_FORCE_INLINE xxh_u64 XRPL_XXH3_mix16B(const xxh_u8* XRPL_XXH_RESTRICT i
 {
 #if defined(__GNUC__) && !defined(__clang__) /* GCC, not Clang */ \
   && defined(__i386__) && defined(__SSE2__)  /* x86 + SSE2 */ \
-  && !defined(XRPL_XXH_ENABLE_AUTOVECTORIZE)      /* Define to disable like XRPL_XXH32 hack */
+  && !defined(XRPL_XXH_ENABLE_AUTOVECTORIZE)      /* Define to disable like XXH32 hack */
     /*
      * UGLY HACK:
      * GCC for x86 tends to autovectorize the 128-bit multiply, resulting in
@@ -4365,7 +4360,7 @@ XRPL_XXH_FORCE_INLINE xxh_u64 XRPL_XXH3_mix16B(const xxh_u8* XRPL_XXH_RESTRICT i
      * cause it to scalarize. See `XRPL_XXH32_round()`
      *
      * FIXME: Clang's output is still _much_ faster -- On an AMD Ryzen 3600,
-     * XRPL_XXH3_64bits @ len=240 runs at 4.6 GB/s with Clang 9, but 3.3 GB/s on
+     * XXH3_64bits @ len=240 runs at 4.6 GB/s with Clang 9, but 3.3 GB/s on
      * GCC 9.2, despite both emitting scalar code.
      *
      * GCC generates much better scalar code than Clang for the rest of XRPL_XXH3,
@@ -4383,10 +4378,10 @@ XRPL_XXH_FORCE_INLINE xxh_u64 XRPL_XXH3_mix16B(const xxh_u8* XRPL_XXH_RESTRICT i
 }
 
 /* For mid range keys, XRPL_XXH3 uses a Mum-hash variant. */
-XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XRPL_XXH64_hash_t
+XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XXH64_hash_t
 XRPL_XXH3_len_17to128_64b(const xxh_u8* XRPL_XXH_RESTRICT input, size_t len,
                      const xxh_u8* XRPL_XXH_RESTRICT secret, size_t secretSize,
-                     XRPL_XXH64_hash_t seed)
+                     XXH64_hash_t seed)
 {
     XRPL_XXH_ASSERT(secretSize >= XRPL_XXH3_SECRET_SIZE_MIN); (void)secretSize;
     XRPL_XXH_ASSERT(16 < len && len <= 128);
@@ -4421,10 +4416,10 @@ XRPL_XXH3_len_17to128_64b(const xxh_u8* XRPL_XXH_RESTRICT input, size_t len,
 
 #define XRPL_XXH3_MIDSIZE_MAX 240
 
-XRPL_XXH_NO_INLINE XRPL_XXH_PUREF XRPL_XXH64_hash_t
+XRPL_XXH_NO_INLINE XRPL_XXH_PUREF XXH64_hash_t
 XRPL_XXH3_len_129to240_64b(const xxh_u8* XRPL_XXH_RESTRICT input, size_t len,
                       const xxh_u8* XRPL_XXH_RESTRICT secret, size_t secretSize,
-                      XRPL_XXH64_hash_t seed)
+                      XXH64_hash_t seed)
 {
     XRPL_XXH_ASSERT(secretSize >= XRPL_XXH3_SECRET_SIZE_MIN); (void)secretSize;
     XRPL_XXH_ASSERT(128 < len && len <= XRPL_XXH3_MIDSIZE_MAX);
@@ -4463,7 +4458,7 @@ XRPL_XXH3_len_129to240_64b(const xxh_u8* XRPL_XXH_RESTRICT input, size_t len,
          * off completely, but they are usually relatively minor and/or not
          * worth it to fix.
          *
-         * This loop is the easiest to fix, as unlike XRPL_XXH32, this pragma
+         * This loop is the easiest to fix, as unlike XXH32, this pragma
          * _actually works_ because it is a loop vectorization instead of an
          * SLP vectorization.
          */
@@ -4574,7 +4569,7 @@ XRPL_XXH_FORCE_INLINE void XRPL_XXH_writeLE64(void* dst, xxh_u64 v64)
  * This doesn't matter on 64-bit hashes since they all get merged together in
  * the end, so we skip the extra step.
  *
- * Both XRPL_XXH3_64bits and XRPL_XXH3_128bits use this subroutine.
+ * Both XXH3_64bits and XXH3_128bits use this subroutine.
  */
 
 #if (XRPL_XXH_VECTOR == XRPL_XXH_AVX512) \
@@ -4631,7 +4626,7 @@ XRPL_XXH_FORCE_INLINE XRPL_XXH_TARGET_AVX512 XRPL_XXH3_ACCUMULATE_TEMPLATE(avx51
  * This isn't as tight as XRPL_XXH3_accumulate, but still written in SIMD to avoid
  * extraction.
  *
- * Both XRPL_XXH3_64bits and XRPL_XXH3_128bits use this subroutine.
+ * Both XXH3_64bits and XXH3_128bits use this subroutine.
  */
 
 XRPL_XXH_FORCE_INLINE XRPL_XXH_TARGET_AVX512 void
@@ -5453,7 +5448,7 @@ XRPL_XXH3_initCustomSecret_scalar(void* XRPL_XXH_RESTRICT customSecret, xxh_u64 
      *
      * See XRPL_XXH3_NEON_LANES for details on the pipsline.
      *
-     * XRPL_XXH3_64bits_withSeed, len == 256, Snapdragon 835
+     * XXH3_64bits_withSeed, len == 256, Snapdragon 835
      *   without hack: 2654.4 MB/s
      *   with hack:    3202.9 MB/s
      */
@@ -5577,7 +5572,7 @@ XRPL_XXH3_mix2Accs(const xxh_u64* XRPL_XXH_RESTRICT acc, const xxh_u8* XRPL_XXH_
                acc[1] ^ XRPL_XXH_readLE64(secret+8) );
 }
 
-static XRPL_XXH64_hash_t
+static XXH64_hash_t
 XRPL_XXH3_mergeAccs(const xxh_u64* XRPL_XXH_RESTRICT acc, const xxh_u8* XRPL_XXH_RESTRICT secret, xxh_u64 start)
 {
     xxh_u64 result64 = start;
@@ -5593,7 +5588,7 @@ XRPL_XXH3_mergeAccs(const xxh_u64* XRPL_XXH_RESTRICT acc, const xxh_u8* XRPL_XXH
          * UGLY HACK:
          * Prevent autovectorization on Clang ARMv7-a. Exact same problem as
          * the one in XRPL_XXH3_len_129to240_64b. Speeds up shorter keys > 240b.
-         * XRPL_XXH3_64bits, len == 256, Snapdragon 835:
+         * XXH3_64bits, len == 256, Snapdragon 835:
          *   without hack: 2063.7 MB/s
          *   with hack:    2560.7 MB/s
          */
@@ -5607,7 +5602,7 @@ XRPL_XXH3_mergeAccs(const xxh_u64* XRPL_XXH_RESTRICT acc, const xxh_u8* XRPL_XXH
 #define XRPL_XXH3_INIT_ACC { XRPL_XXH_PRIME32_3, XRPL_XXH_PRIME64_1, XRPL_XXH_PRIME64_2, XRPL_XXH_PRIME64_3, \
                         XRPL_XXH_PRIME64_4, XRPL_XXH_PRIME32_2, XRPL_XXH_PRIME64_5, XRPL_XXH_PRIME32_1 }
 
-XRPL_XXH_FORCE_INLINE XRPL_XXH64_hash_t
+XRPL_XXH_FORCE_INLINE XXH64_hash_t
 XRPL_XXH3_hashLong_64b_internal(const void* XRPL_XXH_RESTRICT input, size_t len,
                            const void* XRPL_XXH_RESTRICT secret, size_t secretSize,
                            XRPL_XXH3_f_accumulate f_acc,
@@ -5632,9 +5627,9 @@ XRPL_XXH3_hashLong_64b_internal(const void* XRPL_XXH_RESTRICT input, size_t len,
  * When the secret size is unknown, or on GCC 12 where the mix of NO_INLINE and FORCE_INLINE
  * breaks -Og, this is XRPL_XXH_NO_INLINE.
  */
-XRPL_XXH3_WITH_SECRET_INLINE XRPL_XXH64_hash_t
+XRPL_XXH3_WITH_SECRET_INLINE XXH64_hash_t
 XRPL_XXH3_hashLong_64b_withSecret(const void* XRPL_XXH_RESTRICT input, size_t len,
-                             XRPL_XXH64_hash_t seed64, const xxh_u8* XRPL_XXH_RESTRICT secret, size_t secretLen)
+                             XXH64_hash_t seed64, const xxh_u8* XRPL_XXH_RESTRICT secret, size_t secretLen)
 {
     (void)seed64;
     return XRPL_XXH3_hashLong_64b_internal(input, len, secret, secretLen, XRPL_XXH3_accumulate, XRPL_XXH3_scrambleAcc);
@@ -5646,9 +5641,9 @@ XRPL_XXH3_hashLong_64b_withSecret(const void* XRPL_XXH_RESTRICT input, size_t le
  * Note that inside this no_inline function, we do inline the internal loop,
  * and provide a statically defined secret size to allow optimization of vector loop.
  */
-XRPL_XXH_NO_INLINE XRPL_XXH_PUREF XRPL_XXH64_hash_t
+XRPL_XXH_NO_INLINE XRPL_XXH_PUREF XXH64_hash_t
 XRPL_XXH3_hashLong_64b_default(const void* XRPL_XXH_RESTRICT input, size_t len,
-                          XRPL_XXH64_hash_t seed64, const xxh_u8* XRPL_XXH_RESTRICT secret, size_t secretLen)
+                          XXH64_hash_t seed64, const xxh_u8* XRPL_XXH_RESTRICT secret, size_t secretLen)
 {
     (void)seed64; (void)secret; (void)secretLen;
     return XRPL_XXH3_hashLong_64b_internal(input, len, XRPL_XXH3_kSecret, sizeof(XRPL_XXH3_kSecret), XRPL_XXH3_accumulate, XRPL_XXH3_scrambleAcc);
@@ -5665,9 +5660,9 @@ XRPL_XXH3_hashLong_64b_default(const void* XRPL_XXH_RESTRICT input, size_t len,
  * It's important for performance that XRPL_XXH3_hashLong is not inlined. Not sure
  * why (uop cache maybe?), but the difference is large and easily measurable.
  */
-XRPL_XXH_FORCE_INLINE XRPL_XXH64_hash_t
+XRPL_XXH_FORCE_INLINE XXH64_hash_t
 XRPL_XXH3_hashLong_64b_withSeed_internal(const void* input, size_t len,
-                                    XRPL_XXH64_hash_t seed,
+                                    XXH64_hash_t seed,
                                     XRPL_XXH3_f_accumulate f_acc,
                                     XRPL_XXH3_f_scrambleAcc f_scramble,
                                     XRPL_XXH3_f_initCustomSecret f_initSec)
@@ -5688,9 +5683,9 @@ XRPL_XXH3_hashLong_64b_withSeed_internal(const void* input, size_t len,
 /*
  * It's important for performance that XRPL_XXH3_hashLong is not inlined.
  */
-XRPL_XXH_NO_INLINE XRPL_XXH64_hash_t
+XRPL_XXH_NO_INLINE XXH64_hash_t
 XRPL_XXH3_hashLong_64b_withSeed(const void* XRPL_XXH_RESTRICT input, size_t len,
-                           XRPL_XXH64_hash_t seed, const xxh_u8* XRPL_XXH_RESTRICT secret, size_t secretLen)
+                           XXH64_hash_t seed, const xxh_u8* XRPL_XXH_RESTRICT secret, size_t secretLen)
 {
     (void)secret; (void)secretLen;
     return XRPL_XXH3_hashLong_64b_withSeed_internal(input, len, seed,
@@ -5698,12 +5693,12 @@ XRPL_XXH3_hashLong_64b_withSeed(const void* XRPL_XXH_RESTRICT input, size_t len,
 }
 
 
-typedef XRPL_XXH64_hash_t (*XRPL_XXH3_hashLong64_f)(const void* XRPL_XXH_RESTRICT, size_t,
-                                          XRPL_XXH64_hash_t, const xxh_u8* XRPL_XXH_RESTRICT, size_t);
+typedef XXH64_hash_t (*XRPL_XXH3_hashLong64_f)(const void* XRPL_XXH_RESTRICT, size_t,
+                                          XXH64_hash_t, const xxh_u8* XRPL_XXH_RESTRICT, size_t);
 
-XRPL_XXH_FORCE_INLINE XRPL_XXH64_hash_t
+XRPL_XXH_FORCE_INLINE XXH64_hash_t
 XRPL_XXH3_64bits_internal(const void* XRPL_XXH_RESTRICT input, size_t len,
-                     XRPL_XXH64_hash_t seed64, const void* XRPL_XXH_RESTRICT secret, size_t secretLen,
+                     XXH64_hash_t seed64, const void* XRPL_XXH_RESTRICT secret, size_t secretLen,
                      XRPL_XXH3_hashLong64_f f_hashLong)
 {
     XRPL_XXH_ASSERT(secretLen >= XRPL_XXH3_SECRET_SIZE_MIN);
@@ -5727,27 +5722,27 @@ XRPL_XXH3_64bits_internal(const void* XRPL_XXH_RESTRICT input, size_t len,
 /* ===   Public entry point   === */
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t XRPL_XXH3_64bits(XRPL_XXH_NOESCAPE const void* input, size_t length)
+XRPL_XXH_PUBLIC_API XXH64_hash_t XXH3_64bits(XRPL_XXH_NOESCAPE const void* input, size_t length)
 {
     return XRPL_XXH3_64bits_internal(input, length, 0, XRPL_XXH3_kSecret, sizeof(XRPL_XXH3_kSecret), XRPL_XXH3_hashLong_64b_default);
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t
-XRPL_XXH3_64bits_withSecret(XRPL_XXH_NOESCAPE const void* input, size_t length, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize)
+XRPL_XXH_PUBLIC_API XXH64_hash_t
+XXH3_64bits_withSecret(XRPL_XXH_NOESCAPE const void* input, size_t length, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize)
 {
     return XRPL_XXH3_64bits_internal(input, length, 0, secret, secretSize, XRPL_XXH3_hashLong_64b_withSecret);
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t
-XRPL_XXH3_64bits_withSeed(XRPL_XXH_NOESCAPE const void* input, size_t length, XRPL_XXH64_hash_t seed)
+XRPL_XXH_PUBLIC_API XXH64_hash_t
+XXH3_64bits_withSeed(XRPL_XXH_NOESCAPE const void* input, size_t length, XXH64_hash_t seed)
 {
     return XRPL_XXH3_64bits_internal(input, length, seed, XRPL_XXH3_kSecret, sizeof(XRPL_XXH3_kSecret), XRPL_XXH3_hashLong_64b_withSeed);
 }
 
-XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t
-XRPL_XXH3_64bits_withSecretandSeed(XRPL_XXH_NOESCAPE const void* input, size_t length, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize, XRPL_XXH64_hash_t seed)
+XRPL_XXH_PUBLIC_API XXH64_hash_t
+XXH3_64bits_withSecretandSeed(XRPL_XXH_NOESCAPE const void* input, size_t length, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize, XXH64_hash_t seed)
 {
     if (length <= XRPL_XXH3_MIDSIZE_MAX)
         return XRPL_XXH3_64bits_internal(input, length, seed, XRPL_XXH3_kSecret, sizeof(XRPL_XXH3_kSecret), NULL);
@@ -5767,7 +5762,7 @@ XRPL_XXH3_64bits_withSecretandSeed(XRPL_XXH_NOESCAPE const void* input, size_t l
  * or on 32-bit, the 16 byte aligned loads in SSE2 and NEON.
  *
  * This underalignment previously caused a rather obvious crash which went
- * completely unnoticed due to XRPL_XXH3_createState() not actually being tested.
+ * completely unnoticed due to XXH3_createState() not actually being tested.
  * Credit to RedSpah for noticing this bug.
  *
  * The alignment is done manually: Functions like posix_memalign or _mm_malloc
@@ -5824,14 +5819,14 @@ static void XRPL_XXH_alignedFree(void* p)
 }
 /*! @ingroup XRPL_XXH3_family */
 /*!
- * @brief Allocate an @ref XRPL_XXH3_state_t.
+ * @brief Allocate an @ref XXH3_state_t.
  *
- * Must be freed with XRPL_XXH3_freeState().
- * @return An allocated XRPL_XXH3_state_t on success, `NULL` on failure.
+ * Must be freed with XXH3_freeState().
+ * @return An allocated XXH3_state_t on success, `NULL` on failure.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH3_state_t* XRPL_XXH3_createState(void)
+XRPL_XXH_PUBLIC_API XXH3_state_t* XXH3_createState(void)
 {
-    XRPL_XXH3_state_t* const state = (XRPL_XXH3_state_t*)XRPL_XXH_alignedMalloc(sizeof(XRPL_XXH3_state_t), 64);
+    XXH3_state_t* const state = (XXH3_state_t*)XRPL_XXH_alignedMalloc(sizeof(XXH3_state_t), 64);
     if (state==NULL) return NULL;
     XRPL_XXH3_INITSTATE(state);
     return state;
@@ -5839,33 +5834,33 @@ XRPL_XXH_PUBLIC_API XRPL_XXH3_state_t* XRPL_XXH3_createState(void)
 
 /*! @ingroup XRPL_XXH3_family */
 /*!
- * @brief Frees an @ref XRPL_XXH3_state_t.
+ * @brief Frees an @ref XXH3_state_t.
  *
- * Must be allocated with XRPL_XXH3_createState().
- * @param statePtr A pointer to an @ref XRPL_XXH3_state_t allocated with @ref XRPL_XXH3_createState().
- * @return XRPL_XXH_OK.
+ * Must be allocated with XXH3_createState().
+ * @param statePtr A pointer to an @ref XXH3_state_t allocated with @ref XXH3_createState().
+ * @return XXH_OK.
  */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode XRPL_XXH3_freeState(XRPL_XXH3_state_t* statePtr)
+XRPL_XXH_PUBLIC_API XXH_errorcode XXH3_freeState(XXH3_state_t* statePtr)
 {
     XRPL_XXH_alignedFree(statePtr);
-    return XRPL_XXH_OK;
+    return XXH_OK;
 }
 
 /*! @ingroup XRPL_XXH3_family */
 XRPL_XXH_PUBLIC_API void
-XRPL_XXH3_copyState(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* dst_state, XRPL_XXH_NOESCAPE const XRPL_XXH3_state_t* src_state)
+XXH3_copyState(XRPL_XXH_NOESCAPE XXH3_state_t* dst_state, XRPL_XXH_NOESCAPE const XXH3_state_t* src_state)
 {
     XRPL_XXH_memcpy(dst_state, src_state, sizeof(*dst_state));
 }
 
 static void
-XRPL_XXH3_reset_internal(XRPL_XXH3_state_t* statePtr,
-                    XRPL_XXH64_hash_t seed,
+XRPL_XXH3_reset_internal(XXH3_state_t* statePtr,
+                    XXH64_hash_t seed,
                     const void* secret, size_t secretSize)
 {
-    size_t const initStart = offsetof(XRPL_XXH3_state_t, bufferedSize);
-    size_t const initLength = offsetof(XRPL_XXH3_state_t, nbStripesPerBlock) - initStart;
-    XRPL_XXH_ASSERT(offsetof(XRPL_XXH3_state_t, nbStripesPerBlock) > initStart);
+    size_t const initStart = offsetof(XXH3_state_t, bufferedSize);
+    size_t const initLength = offsetof(XXH3_state_t, nbStripesPerBlock) - initStart;
+    XRPL_XXH_ASSERT(offsetof(XXH3_state_t, nbStripesPerBlock) > initStart);
     XRPL_XXH_ASSERT(statePtr != NULL);
     /* set members from bufferedSize to nbStripesPerBlock (excluded) to 0 */
     memset((char*)statePtr + initStart, 0, initLength);
@@ -5886,47 +5881,47 @@ XRPL_XXH3_reset_internal(XRPL_XXH3_state_t* statePtr,
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_64bits_reset(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_64bits_reset(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr)
 {
-    if (statePtr == NULL) return XRPL_XXH_ERROR;
+    if (statePtr == NULL) return XXH_ERROR;
     XRPL_XXH3_reset_internal(statePtr, 0, XRPL_XXH3_kSecret, XRPL_XXH_SECRET_DEFAULT_SIZE);
-    return XRPL_XXH_OK;
+    return XXH_OK;
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_64bits_reset_withSecret(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_64bits_reset_withSecret(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize)
 {
-    if (statePtr == NULL) return XRPL_XXH_ERROR;
+    if (statePtr == NULL) return XXH_ERROR;
     XRPL_XXH3_reset_internal(statePtr, 0, secret, secretSize);
-    if (secret == NULL) return XRPL_XXH_ERROR;
-    if (secretSize < XRPL_XXH3_SECRET_SIZE_MIN) return XRPL_XXH_ERROR;
-    return XRPL_XXH_OK;
+    if (secret == NULL) return XXH_ERROR;
+    if (secretSize < XRPL_XXH3_SECRET_SIZE_MIN) return XXH_ERROR;
+    return XXH_OK;
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_64bits_reset_withSeed(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr, XRPL_XXH64_hash_t seed)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_64bits_reset_withSeed(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr, XXH64_hash_t seed)
 {
-    if (statePtr == NULL) return XRPL_XXH_ERROR;
-    if (seed==0) return XRPL_XXH3_64bits_reset(statePtr);
+    if (statePtr == NULL) return XXH_ERROR;
+    if (seed==0) return XXH3_64bits_reset(statePtr);
     if ((seed != statePtr->seed) || (statePtr->extSecret != NULL))
         XRPL_XXH3_initCustomSecret(statePtr->customSecret, seed);
     XRPL_XXH3_reset_internal(statePtr, seed, NULL, XRPL_XXH_SECRET_DEFAULT_SIZE);
-    return XRPL_XXH_OK;
+    return XXH_OK;
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_64bits_reset_withSecretandSeed(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize, XRPL_XXH64_hash_t seed64)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_64bits_reset_withSecretandSeed(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize, XXH64_hash_t seed64)
 {
-    if (statePtr == NULL) return XRPL_XXH_ERROR;
-    if (secret == NULL) return XRPL_XXH_ERROR;
-    if (secretSize < XRPL_XXH3_SECRET_SIZE_MIN) return XRPL_XXH_ERROR;
+    if (statePtr == NULL) return XXH_ERROR;
+    if (secret == NULL) return XXH_ERROR;
+    if (secretSize < XRPL_XXH3_SECRET_SIZE_MIN) return XXH_ERROR;
     XRPL_XXH3_reset_internal(statePtr, seed64, secret, secretSize);
     statePtr->useSeed = 1; /* always, even if seed64==0 */
-    return XRPL_XXH_OK;
+    return XXH_OK;
 }
 
 /*!
@@ -5988,17 +5983,17 @@ XRPL_XXH3_consumeStripes(xxh_u64* XRPL_XXH_RESTRICT acc,
 # endif
 #endif
 /*
- * Both XRPL_XXH3_64bits_update and XRPL_XXH3_128bits_update use this routine.
+ * Both XXH3_64bits_update and XXH3_128bits_update use this routine.
  */
-XRPL_XXH_FORCE_INLINE XRPL_XXH_errorcode
-XRPL_XXH3_update(XRPL_XXH3_state_t* XRPL_XXH_RESTRICT const state,
+XRPL_XXH_FORCE_INLINE XXH_errorcode
+XRPL_XXH3_update(XXH3_state_t* XRPL_XXH_RESTRICT const state,
             const xxh_u8* XRPL_XXH_RESTRICT input, size_t len,
             XRPL_XXH3_f_accumulate f_acc,
             XRPL_XXH3_f_scrambleAcc f_scramble)
 {
     if (input==NULL) {
         XRPL_XXH_ASSERT(len == 0);
-        return XRPL_XXH_OK;
+        return XXH_OK;
     }
 
     XRPL_XXH_ASSERT(state != NULL);
@@ -6020,8 +6015,8 @@ XRPL_XXH3_update(XRPL_XXH3_state_t* XRPL_XXH_RESTRICT const state,
         /* small input : just fill in tmp buffer */
         if (len <= XRPL_XXH3_INTERNALBUFFER_SIZE - state->bufferedSize) {
             XRPL_XXH_memcpy(state->buffer + state->bufferedSize, input, len);
-            state->bufferedSize += (XRPL_XXH32_hash_t)len;
-            return XRPL_XXH_OK;
+            state->bufferedSize += (XXH32_hash_t)len;
+            return XXH_OK;
         }
 
         /* total input is now > XRPL_XXH3_INTERNALBUFFER_SIZE */
@@ -6059,19 +6054,19 @@ XRPL_XXH3_update(XRPL_XXH3_state_t* XRPL_XXH_RESTRICT const state,
         XRPL_XXH_ASSERT(bEnd - input <= XRPL_XXH3_INTERNALBUFFER_SIZE);
         XRPL_XXH_ASSERT(state->bufferedSize == 0);
         XRPL_XXH_memcpy(state->buffer, input, (size_t)(bEnd-input));
-        state->bufferedSize = (XRPL_XXH32_hash_t)(bEnd-input);
+        state->bufferedSize = (XXH32_hash_t)(bEnd-input);
 #if defined(XRPL_XXH3_STREAM_USE_STACK) && XRPL_XXH3_STREAM_USE_STACK >= 1
         /* save stack accumulators into state */
         XRPL_XXH_memcpy(state->acc, acc, sizeof(acc));
 #endif
     }
 
-    return XRPL_XXH_OK;
+    return XXH_OK;
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_64bits_update(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* state, XRPL_XXH_NOESCAPE const void* input, size_t len)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_64bits_update(XRPL_XXH_NOESCAPE XXH3_state_t* state, XRPL_XXH_NOESCAPE const void* input, size_t len)
 {
     return XRPL_XXH3_update(state, (const xxh_u8*)input, len,
                        XRPL_XXH3_accumulate, XRPL_XXH3_scrambleAcc);
@@ -6079,8 +6074,8 @@ XRPL_XXH3_64bits_update(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* state, XRPL_XXH_NOE
 
 
 XRPL_XXH_FORCE_INLINE void
-XRPL_XXH3_digest_long (XRPL_XXH64_hash_t* acc,
-                  const XRPL_XXH3_state_t* state,
+XRPL_XXH3_digest_long (XXH64_hash_t* acc,
+                  const XXH3_state_t* state,
                   const unsigned char* secret)
 {
     xxh_u8 lastStripe[XRPL_XXH_STRIPE_LEN];
@@ -6116,11 +6111,11 @@ XRPL_XXH3_digest_long (XRPL_XXH64_hash_t* acc,
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t XRPL_XXH3_64bits_digest (XRPL_XXH_NOESCAPE const XRPL_XXH3_state_t* state)
+XRPL_XXH_PUBLIC_API XXH64_hash_t XXH3_64bits_digest (XRPL_XXH_NOESCAPE const XXH3_state_t* state)
 {
     const unsigned char* const secret = (state->extSecret == NULL) ? state->customSecret : state->extSecret;
     if (state->totalLen > XRPL_XXH3_MIDSIZE_MAX) {
-        XRPL_XXH_ALIGN(XRPL_XXH_ACC_ALIGN) XRPL_XXH64_hash_t acc[XRPL_XXH_ACC_NB];
+        XRPL_XXH_ALIGN(XRPL_XXH_ACC_ALIGN) XXH64_hash_t acc[XRPL_XXH_ACC_NB];
         XRPL_XXH3_digest_long(acc, state, secret);
         return XRPL_XXH3_mergeAccs(acc,
                               secret + XRPL_XXH_SECRET_MERGEACCS_START,
@@ -6128,15 +6123,15 @@ XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t XRPL_XXH3_64bits_digest (XRPL_XXH_NOESCAPE
     }
     /* totalLen <= XRPL_XXH3_MIDSIZE_MAX: digesting a short input */
     if (state->useSeed)
-        return XRPL_XXH3_64bits_withSeed(state->buffer, (size_t)state->totalLen, state->seed);
-    return XRPL_XXH3_64bits_withSecret(state->buffer, (size_t)(state->totalLen),
+        return XXH3_64bits_withSeed(state->buffer, (size_t)state->totalLen, state->seed);
+    return XXH3_64bits_withSecret(state->buffer, (size_t)(state->totalLen),
                                   secret, state->secretLimit + XRPL_XXH_STRIPE_LEN);
 }
 #endif /* !XRPL_XXH_NO_STREAM */
 
 
 /* ==========================================
- * XRPL_XXH3 128 bits (a.k.a XRPL_XXH128)
+ * XRPL_XXH3 128 bits (a.k.a XXH128)
  * ==========================================
  * XRPL_XXH3's 128-bit variant has better mixing and strength than the 64-bit variant,
  * even without counting the significantly larger output size.
@@ -6148,12 +6143,12 @@ XRPL_XXH_PUBLIC_API XRPL_XXH64_hash_t XRPL_XXH3_64bits_digest (XRPL_XXH_NOESCAPE
  * lengths. Note that longer hashes are about as fast as the 64-bit version
  * due to it using only a slight modification of the 64-bit loop.
  *
- * XRPL_XXH128 is also more oriented towards 64-bit machines. It is still extremely
- * fast for a _128-bit_ hash on 32-bit (it usually clears XRPL_XXH64).
+ * XXH128 is also more oriented towards 64-bit machines. It is still extremely
+ * fast for a _128-bit_ hash on 32-bit (it usually clears XXH64).
  */
 
-XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XRPL_XXH128_hash_t
-XRPL_XXH3_len_1to3_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XRPL_XXH64_hash_t seed)
+XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XXH128_hash_t
+XRPL_XXH3_len_1to3_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
     /* A doubled version of 1to3_64b with different constants. */
     XRPL_XXH_ASSERT(input != NULL);
@@ -6174,15 +6169,15 @@ XRPL_XXH3_len_1to3_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, X
         xxh_u64 const bitfliph = (XRPL_XXH_readLE32(secret+8) ^ XRPL_XXH_readLE32(secret+12)) - seed;
         xxh_u64 const keyed_lo = (xxh_u64)combinedl ^ bitflipl;
         xxh_u64 const keyed_hi = (xxh_u64)combinedh ^ bitfliph;
-        XRPL_XXH128_hash_t h128;
+        XXH128_hash_t h128;
         h128.low64  = XRPL_XXH64_avalanche(keyed_lo);
         h128.high64 = XRPL_XXH64_avalanche(keyed_hi);
         return h128;
     }
 }
 
-XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XRPL_XXH128_hash_t
-XRPL_XXH3_len_4to8_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XRPL_XXH64_hash_t seed)
+XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XXH128_hash_t
+XRPL_XXH3_len_4to8_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
     XRPL_XXH_ASSERT(input != NULL);
     XRPL_XXH_ASSERT(secret != NULL);
@@ -6195,7 +6190,7 @@ XRPL_XXH3_len_4to8_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, X
         xxh_u64 const keyed = input_64 ^ bitflip;
 
         /* Shift len to the left to ensure it is even, this avoids even multiplies. */
-        XRPL_XXH128_hash_t m128 = XRPL_XXH_mult64to128(keyed, XRPL_XXH_PRIME64_1 + (len << 2));
+        XXH128_hash_t m128 = XRPL_XXH_mult64to128(keyed, XRPL_XXH_PRIME64_1 + (len << 2));
 
         m128.high64 += (m128.low64 << 1);
         m128.low64  ^= (m128.high64 >> 3);
@@ -6208,8 +6203,8 @@ XRPL_XXH3_len_4to8_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, X
     }
 }
 
-XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XRPL_XXH128_hash_t
-XRPL_XXH3_len_9to16_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XRPL_XXH64_hash_t seed)
+XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XXH128_hash_t
+XRPL_XXH3_len_9to16_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
     XRPL_XXH_ASSERT(input != NULL);
     XRPL_XXH_ASSERT(secret != NULL);
@@ -6218,7 +6213,7 @@ XRPL_XXH3_len_9to16_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, 
         xxh_u64 const bitfliph = (XRPL_XXH_readLE64(secret+48) ^ XRPL_XXH_readLE64(secret+56)) + seed;
         xxh_u64 const input_lo = XRPL_XXH_readLE64(input);
         xxh_u64       input_hi = XRPL_XXH_readLE64(input + len - 8);
-        XRPL_XXH128_hash_t m128 = XRPL_XXH_mult64to128(input_lo ^ input_hi ^ bitflipl, XRPL_XXH_PRIME64_1);
+        XXH128_hash_t m128 = XRPL_XXH_mult64to128(input_lo ^ input_hi ^ bitflipl, XRPL_XXH_PRIME64_1);
         /*
          * Put len in the middle of m128 to ensure that the length gets mixed to
          * both the low and high bits in the 128x64 multiply below.
@@ -6271,7 +6266,7 @@ XRPL_XXH3_len_9to16_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, 
         m128.low64  ^= XRPL_XXH_swap64(m128.high64);
 
         {   /* 128x64 multiply: h128 = m128 * XRPL_XXH_PRIME64_2; */
-            XRPL_XXH128_hash_t h128 = XRPL_XXH_mult64to128(m128.low64, XRPL_XXH_PRIME64_2);
+            XXH128_hash_t h128 = XRPL_XXH_mult64to128(m128.low64, XRPL_XXH_PRIME64_2);
             h128.high64 += m128.high64 * XRPL_XXH_PRIME64_2;
 
             h128.low64   = XRPL_XXH3_avalanche(h128.low64);
@@ -6283,14 +6278,14 @@ XRPL_XXH3_len_9to16_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, 
 /*
  * Assumption: `secret` size is >= XRPL_XXH3_SECRET_SIZE_MIN
  */
-XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XRPL_XXH128_hash_t
-XRPL_XXH3_len_0to16_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XRPL_XXH64_hash_t seed)
+XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XXH128_hash_t
+XRPL_XXH3_len_0to16_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, XXH64_hash_t seed)
 {
     XRPL_XXH_ASSERT(len <= 16);
     {   if (len > 8) return XRPL_XXH3_len_9to16_128b(input, len, secret, seed);
         if (len >= 4) return XRPL_XXH3_len_4to8_128b(input, len, secret, seed);
         if (len) return XRPL_XXH3_len_1to3_128b(input, len, secret, seed);
-        {   XRPL_XXH128_hash_t h128;
+        {   XXH128_hash_t h128;
             xxh_u64 const bitflipl = XRPL_XXH_readLE64(secret+64) ^ XRPL_XXH_readLE64(secret+72);
             xxh_u64 const bitfliph = XRPL_XXH_readLE64(secret+80) ^ XRPL_XXH_readLE64(secret+88);
             h128.low64 = XRPL_XXH64_avalanche(seed ^ bitflipl);
@@ -6302,9 +6297,9 @@ XRPL_XXH3_len_0to16_128b(const xxh_u8* input, size_t len, const xxh_u8* secret, 
 /*
  * A bit slower than XRPL_XXH3_mix16B, but handles multiply by zero better.
  */
-XRPL_XXH_FORCE_INLINE XRPL_XXH128_hash_t
-XRPL_XXH128_mix32B(XRPL_XXH128_hash_t acc, const xxh_u8* input_1, const xxh_u8* input_2,
-              const xxh_u8* secret, XRPL_XXH64_hash_t seed)
+XRPL_XXH_FORCE_INLINE XXH128_hash_t
+XRPL_XXH128_mix32B(XXH128_hash_t acc, const xxh_u8* input_1, const xxh_u8* input_2,
+              const xxh_u8* secret, XXH64_hash_t seed)
 {
     acc.low64  += XRPL_XXH3_mix16B (input_1, secret+0, seed);
     acc.low64  ^= XRPL_XXH_readLE64(input_2) + XRPL_XXH_readLE64(input_2 + 8);
@@ -6314,15 +6309,15 @@ XRPL_XXH128_mix32B(XRPL_XXH128_hash_t acc, const xxh_u8* input_1, const xxh_u8* 
 }
 
 
-XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XRPL_XXH128_hash_t
+XRPL_XXH_FORCE_INLINE XRPL_XXH_PUREF XXH128_hash_t
 XRPL_XXH3_len_17to128_128b(const xxh_u8* XRPL_XXH_RESTRICT input, size_t len,
                       const xxh_u8* XRPL_XXH_RESTRICT secret, size_t secretSize,
-                      XRPL_XXH64_hash_t seed)
+                      XXH64_hash_t seed)
 {
     XRPL_XXH_ASSERT(secretSize >= XRPL_XXH3_SECRET_SIZE_MIN); (void)secretSize;
     XRPL_XXH_ASSERT(16 < len && len <= 128);
 
-    {   XRPL_XXH128_hash_t acc;
+    {   XXH128_hash_t acc;
         acc.low64 = len * XRPL_XXH_PRIME64_1;
         acc.high64 = 0;
 
@@ -6346,27 +6341,27 @@ XRPL_XXH3_len_17to128_128b(const xxh_u8* XRPL_XXH_RESTRICT input, size_t len,
         }
         acc = XRPL_XXH128_mix32B(acc, input, input+len-16, secret, seed);
 #endif
-        {   XRPL_XXH128_hash_t h128;
+        {   XXH128_hash_t h128;
             h128.low64  = acc.low64 + acc.high64;
             h128.high64 = (acc.low64    * XRPL_XXH_PRIME64_1)
                         + (acc.high64   * XRPL_XXH_PRIME64_4)
                         + ((len - seed) * XRPL_XXH_PRIME64_2);
             h128.low64  = XRPL_XXH3_avalanche(h128.low64);
-            h128.high64 = (XRPL_XXH64_hash_t)0 - XRPL_XXH3_avalanche(h128.high64);
+            h128.high64 = (XXH64_hash_t)0 - XRPL_XXH3_avalanche(h128.high64);
             return h128;
         }
     }
 }
 
-XRPL_XXH_NO_INLINE XRPL_XXH_PUREF XRPL_XXH128_hash_t
+XRPL_XXH_NO_INLINE XRPL_XXH_PUREF XXH128_hash_t
 XRPL_XXH3_len_129to240_128b(const xxh_u8* XRPL_XXH_RESTRICT input, size_t len,
                        const xxh_u8* XRPL_XXH_RESTRICT secret, size_t secretSize,
-                       XRPL_XXH64_hash_t seed)
+                       XXH64_hash_t seed)
 {
     XRPL_XXH_ASSERT(secretSize >= XRPL_XXH3_SECRET_SIZE_MIN); (void)secretSize;
     XRPL_XXH_ASSERT(128 < len && len <= XRPL_XXH3_MIDSIZE_MAX);
 
-    {   XRPL_XXH128_hash_t acc;
+    {   XXH128_hash_t acc;
         unsigned i;
         acc.low64 = len * XRPL_XXH_PRIME64_1;
         acc.high64 = 0;
@@ -6402,21 +6397,21 @@ XRPL_XXH3_len_129to240_128b(const xxh_u8* XRPL_XXH_RESTRICT input, size_t len,
                             input + len - 16,
                             input + len - 32,
                             secret + XRPL_XXH3_SECRET_SIZE_MIN - XRPL_XXH3_MIDSIZE_LASTOFFSET - 16,
-                            (XRPL_XXH64_hash_t)0 - seed);
+                            (XXH64_hash_t)0 - seed);
 
-        {   XRPL_XXH128_hash_t h128;
+        {   XXH128_hash_t h128;
             h128.low64  = acc.low64 + acc.high64;
             h128.high64 = (acc.low64    * XRPL_XXH_PRIME64_1)
                         + (acc.high64   * XRPL_XXH_PRIME64_4)
                         + ((len - seed) * XRPL_XXH_PRIME64_2);
             h128.low64  = XRPL_XXH3_avalanche(h128.low64);
-            h128.high64 = (XRPL_XXH64_hash_t)0 - XRPL_XXH3_avalanche(h128.high64);
+            h128.high64 = (XXH64_hash_t)0 - XRPL_XXH3_avalanche(h128.high64);
             return h128;
         }
     }
 }
 
-XRPL_XXH_FORCE_INLINE XRPL_XXH128_hash_t
+XRPL_XXH_FORCE_INLINE XXH128_hash_t
 XRPL_XXH3_hashLong_128b_internal(const void* XRPL_XXH_RESTRICT input, size_t len,
                             const xxh_u8* XRPL_XXH_RESTRICT secret, size_t secretSize,
                             XRPL_XXH3_f_accumulate f_acc,
@@ -6429,7 +6424,7 @@ XRPL_XXH3_hashLong_128b_internal(const void* XRPL_XXH_RESTRICT input, size_t len
     /* converge into final hash */
     XRPL_XXH_STATIC_ASSERT(sizeof(acc) == 64);
     XRPL_XXH_ASSERT(secretSize >= sizeof(acc) + XRPL_XXH_SECRET_MERGEACCS_START);
-    {   XRPL_XXH128_hash_t h128;
+    {   XXH128_hash_t h128;
         h128.low64  = XRPL_XXH3_mergeAccs(acc,
                                      secret + XRPL_XXH_SECRET_MERGEACCS_START,
                                      (xxh_u64)len * XRPL_XXH_PRIME64_1);
@@ -6444,9 +6439,9 @@ XRPL_XXH3_hashLong_128b_internal(const void* XRPL_XXH_RESTRICT input, size_t len
 /*
  * It's important for performance that XRPL_XXH3_hashLong() is not inlined.
  */
-XRPL_XXH_NO_INLINE XRPL_XXH_PUREF XRPL_XXH128_hash_t
+XRPL_XXH_NO_INLINE XRPL_XXH_PUREF XXH128_hash_t
 XRPL_XXH3_hashLong_128b_default(const void* XRPL_XXH_RESTRICT input, size_t len,
-                           XRPL_XXH64_hash_t seed64,
+                           XXH64_hash_t seed64,
                            const void* XRPL_XXH_RESTRICT secret, size_t secretLen)
 {
     (void)seed64; (void)secret; (void)secretLen;
@@ -6461,9 +6456,9 @@ XRPL_XXH3_hashLong_128b_default(const void* XRPL_XXH_RESTRICT input, size_t len,
  * When the secret size is unknown, or on GCC 12 where the mix of NO_INLINE and FORCE_INLINE
  * breaks -Og, this is XRPL_XXH_NO_INLINE.
  */
-XRPL_XXH3_WITH_SECRET_INLINE XRPL_XXH128_hash_t
+XRPL_XXH3_WITH_SECRET_INLINE XXH128_hash_t
 XRPL_XXH3_hashLong_128b_withSecret(const void* XRPL_XXH_RESTRICT input, size_t len,
-                              XRPL_XXH64_hash_t seed64,
+                              XXH64_hash_t seed64,
                               const void* XRPL_XXH_RESTRICT secret, size_t secretLen)
 {
     (void)seed64;
@@ -6471,9 +6466,9 @@ XRPL_XXH3_hashLong_128b_withSecret(const void* XRPL_XXH_RESTRICT input, size_t l
                                        XRPL_XXH3_accumulate, XRPL_XXH3_scrambleAcc);
 }
 
-XRPL_XXH_FORCE_INLINE XRPL_XXH128_hash_t
+XRPL_XXH_FORCE_INLINE XXH128_hash_t
 XRPL_XXH3_hashLong_128b_withSeed_internal(const void* XRPL_XXH_RESTRICT input, size_t len,
-                                XRPL_XXH64_hash_t seed64,
+                                XXH64_hash_t seed64,
                                 XRPL_XXH3_f_accumulate f_acc,
                                 XRPL_XXH3_f_scrambleAcc f_scramble,
                                 XRPL_XXH3_f_initCustomSecret f_initSec)
@@ -6492,21 +6487,21 @@ XRPL_XXH3_hashLong_128b_withSeed_internal(const void* XRPL_XXH_RESTRICT input, s
 /*
  * It's important for performance that XRPL_XXH3_hashLong is not inlined.
  */
-XRPL_XXH_NO_INLINE XRPL_XXH128_hash_t
+XRPL_XXH_NO_INLINE XXH128_hash_t
 XRPL_XXH3_hashLong_128b_withSeed(const void* input, size_t len,
-                            XRPL_XXH64_hash_t seed64, const void* XRPL_XXH_RESTRICT secret, size_t secretLen)
+                            XXH64_hash_t seed64, const void* XRPL_XXH_RESTRICT secret, size_t secretLen)
 {
     (void)secret; (void)secretLen;
     return XRPL_XXH3_hashLong_128b_withSeed_internal(input, len, seed64,
                 XRPL_XXH3_accumulate, XRPL_XXH3_scrambleAcc, XRPL_XXH3_initCustomSecret);
 }
 
-typedef XRPL_XXH128_hash_t (*XRPL_XXH3_hashLong128_f)(const void* XRPL_XXH_RESTRICT, size_t,
-                                            XRPL_XXH64_hash_t, const void* XRPL_XXH_RESTRICT, size_t);
+typedef XXH128_hash_t (*XRPL_XXH3_hashLong128_f)(const void* XRPL_XXH_RESTRICT, size_t,
+                                            XXH64_hash_t, const void* XRPL_XXH_RESTRICT, size_t);
 
-XRPL_XXH_FORCE_INLINE XRPL_XXH128_hash_t
+XRPL_XXH_FORCE_INLINE XXH128_hash_t
 XRPL_XXH3_128bits_internal(const void* input, size_t len,
-                      XRPL_XXH64_hash_t seed64, const void* XRPL_XXH_RESTRICT secret, size_t secretLen,
+                      XXH64_hash_t seed64, const void* XRPL_XXH_RESTRICT secret, size_t secretLen,
                       XRPL_XXH3_hashLong128_f f_hl128)
 {
     XRPL_XXH_ASSERT(secretLen >= XRPL_XXH3_SECRET_SIZE_MIN);
@@ -6526,10 +6521,10 @@ XRPL_XXH3_128bits_internal(const void* input, size_t len,
 }
 
 
-/* ===   Public XRPL_XXH128 API   === */
+/* ===   Public XXH128 API   === */
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH128_hash_t XRPL_XXH3_128bits(XRPL_XXH_NOESCAPE const void* input, size_t len)
+XRPL_XXH_PUBLIC_API XXH128_hash_t XXH3_128bits(XRPL_XXH_NOESCAPE const void* input, size_t len)
 {
     return XRPL_XXH3_128bits_internal(input, len, 0,
                                  XRPL_XXH3_kSecret, sizeof(XRPL_XXH3_kSecret),
@@ -6537,8 +6532,8 @@ XRPL_XXH_PUBLIC_API XRPL_XXH128_hash_t XRPL_XXH3_128bits(XRPL_XXH_NOESCAPE const
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH128_hash_t
-XRPL_XXH3_128bits_withSecret(XRPL_XXH_NOESCAPE const void* input, size_t len, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize)
+XRPL_XXH_PUBLIC_API XXH128_hash_t
+XXH3_128bits_withSecret(XRPL_XXH_NOESCAPE const void* input, size_t len, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize)
 {
     return XRPL_XXH3_128bits_internal(input, len, 0,
                                  (const xxh_u8*)secret, secretSize,
@@ -6546,8 +6541,8 @@ XRPL_XXH3_128bits_withSecret(XRPL_XXH_NOESCAPE const void* input, size_t len, XR
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH128_hash_t
-XRPL_XXH3_128bits_withSeed(XRPL_XXH_NOESCAPE const void* input, size_t len, XRPL_XXH64_hash_t seed)
+XRPL_XXH_PUBLIC_API XXH128_hash_t
+XXH3_128bits_withSeed(XRPL_XXH_NOESCAPE const void* input, size_t len, XXH64_hash_t seed)
 {
     return XRPL_XXH3_128bits_internal(input, len, seed,
                                  XRPL_XXH3_kSecret, sizeof(XRPL_XXH3_kSecret),
@@ -6555,8 +6550,8 @@ XRPL_XXH3_128bits_withSeed(XRPL_XXH_NOESCAPE const void* input, size_t len, XRPL
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH128_hash_t
-XRPL_XXH3_128bits_withSecretandSeed(XRPL_XXH_NOESCAPE const void* input, size_t len, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize, XRPL_XXH64_hash_t seed)
+XRPL_XXH_PUBLIC_API XXH128_hash_t
+XXH3_128bits_withSecretandSeed(XRPL_XXH_NOESCAPE const void* input, size_t len, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize, XXH64_hash_t seed)
 {
     if (len <= XRPL_XXH3_MIDSIZE_MAX)
         return XRPL_XXH3_128bits_internal(input, len, seed, XRPL_XXH3_kSecret, sizeof(XRPL_XXH3_kSecret), NULL);
@@ -6564,10 +6559,10 @@ XRPL_XXH3_128bits_withSecretandSeed(XRPL_XXH_NOESCAPE const void* input, size_t 
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH128_hash_t
-XRPL_XXH128(XRPL_XXH_NOESCAPE const void* input, size_t len, XRPL_XXH64_hash_t seed)
+XRPL_XXH_PUBLIC_API XXH128_hash_t
+XXH128(XRPL_XXH_NOESCAPE const void* input, size_t len, XXH64_hash_t seed)
 {
-    return XRPL_XXH3_128bits_withSeed(input, len, seed);
+    return XXH3_128bits_withSeed(input, len, seed);
 }
 
 
@@ -6579,49 +6574,49 @@ XRPL_XXH128(XRPL_XXH_NOESCAPE const void* input, size_t len, XRPL_XXH64_hash_t s
  */
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_128bits_reset(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_128bits_reset(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr)
 {
-    return XRPL_XXH3_64bits_reset(statePtr);
+    return XXH3_64bits_reset(statePtr);
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_128bits_reset_withSecret(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_128bits_reset_withSecret(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize)
 {
-    return XRPL_XXH3_64bits_reset_withSecret(statePtr, secret, secretSize);
+    return XXH3_64bits_reset_withSecret(statePtr, secret, secretSize);
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_128bits_reset_withSeed(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr, XRPL_XXH64_hash_t seed)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_128bits_reset_withSeed(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr, XXH64_hash_t seed)
 {
-    return XRPL_XXH3_64bits_reset_withSeed(statePtr, seed);
+    return XXH3_64bits_reset_withSeed(statePtr, seed);
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_128bits_reset_withSecretandSeed(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize, XRPL_XXH64_hash_t seed)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_128bits_reset_withSecretandSeed(XRPL_XXH_NOESCAPE XXH3_state_t* statePtr, XRPL_XXH_NOESCAPE const void* secret, size_t secretSize, XXH64_hash_t seed)
 {
-    return XRPL_XXH3_64bits_reset_withSecretandSeed(statePtr, secret, secretSize, seed);
+    return XXH3_64bits_reset_withSecretandSeed(statePtr, secret, secretSize, seed);
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_128bits_update(XRPL_XXH_NOESCAPE XRPL_XXH3_state_t* state, XRPL_XXH_NOESCAPE const void* input, size_t len)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_128bits_update(XRPL_XXH_NOESCAPE XXH3_state_t* state, XRPL_XXH_NOESCAPE const void* input, size_t len)
 {
-    return XRPL_XXH3_64bits_update(state, input, len);
+    return XXH3_64bits_update(state, input, len);
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH128_hash_t XRPL_XXH3_128bits_digest (XRPL_XXH_NOESCAPE const XRPL_XXH3_state_t* state)
+XRPL_XXH_PUBLIC_API XXH128_hash_t XXH3_128bits_digest (XRPL_XXH_NOESCAPE const XXH3_state_t* state)
 {
     const unsigned char* const secret = (state->extSecret == NULL) ? state->customSecret : state->extSecret;
     if (state->totalLen > XRPL_XXH3_MIDSIZE_MAX) {
-        XRPL_XXH_ALIGN(XRPL_XXH_ACC_ALIGN) XRPL_XXH64_hash_t acc[XRPL_XXH_ACC_NB];
+        XRPL_XXH_ALIGN(XRPL_XXH_ACC_ALIGN) XXH64_hash_t acc[XRPL_XXH_ACC_NB];
         XRPL_XXH3_digest_long(acc, state, secret);
         XRPL_XXH_ASSERT(state->secretLimit + XRPL_XXH_STRIPE_LEN >= sizeof(acc) + XRPL_XXH_SECRET_MERGEACCS_START);
-        {   XRPL_XXH128_hash_t h128;
+        {   XXH128_hash_t h128;
             h128.low64  = XRPL_XXH3_mergeAccs(acc,
                                          secret + XRPL_XXH_SECRET_MERGEACCS_START,
                                          (xxh_u64)state->totalLen * XRPL_XXH_PRIME64_1);
@@ -6634,8 +6629,8 @@ XRPL_XXH_PUBLIC_API XRPL_XXH128_hash_t XRPL_XXH3_128bits_digest (XRPL_XXH_NOESCA
     }
     /* len <= XRPL_XXH3_MIDSIZE_MAX : short code */
     if (state->seed)
-        return XRPL_XXH3_128bits_withSeed(state->buffer, (size_t)state->totalLen, state->seed);
-    return XRPL_XXH3_128bits_withSecret(state->buffer, (size_t)(state->totalLen),
+        return XXH3_128bits_withSeed(state->buffer, (size_t)state->totalLen, state->seed);
+    return XXH3_128bits_withSecret(state->buffer, (size_t)(state->totalLen),
                                    secret, state->secretLimit + XRPL_XXH_STRIPE_LEN);
 }
 #endif /* !XRPL_XXH_NO_STREAM */
@@ -6645,9 +6640,9 @@ XRPL_XXH_PUBLIC_API XRPL_XXH128_hash_t XRPL_XXH3_128bits_digest (XRPL_XXH_NOESCA
 
 /* return : 1 is equal, 0 if different */
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API int XRPL_XXH128_isEqual(XRPL_XXH128_hash_t h1, XRPL_XXH128_hash_t h2)
+XRPL_XXH_PUBLIC_API int XXH128_isEqual(XXH128_hash_t h1, XXH128_hash_t h2)
 {
-    /* note : XRPL_XXH128_hash_t is compact, it has no padding byte */
+    /* note : XXH128_hash_t is compact, it has no padding byte */
     return !(memcmp(&h1, &h2, sizeof(h1)));
 }
 
@@ -6656,10 +6651,10 @@ XRPL_XXH_PUBLIC_API int XRPL_XXH128_isEqual(XRPL_XXH128_hash_t h1, XRPL_XXH128_h
  *           <0 if *h128_1  < *h128_2
  *           =0 if *h128_1 == *h128_2  */
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API int XRPL_XXH128_cmp(XRPL_XXH_NOESCAPE const void* h128_1, XRPL_XXH_NOESCAPE const void* h128_2)
+XRPL_XXH_PUBLIC_API int XXH128_cmp(XRPL_XXH_NOESCAPE const void* h128_1, XRPL_XXH_NOESCAPE const void* h128_2)
 {
-    XRPL_XXH128_hash_t const h1 = *(const XRPL_XXH128_hash_t*)h128_1;
-    XRPL_XXH128_hash_t const h2 = *(const XRPL_XXH128_hash_t*)h128_2;
+    XXH128_hash_t const h1 = *(const XXH128_hash_t*)h128_1;
+    XXH128_hash_t const h2 = *(const XXH128_hash_t*)h128_2;
     int const hcmp = (h1.high64 > h2.high64) - (h2.high64 > h1.high64);
     /* note : bets that, in most cases, hash values are different */
     if (hcmp) return hcmp;
@@ -6670,9 +6665,9 @@ XRPL_XXH_PUBLIC_API int XRPL_XXH128_cmp(XRPL_XXH_NOESCAPE const void* h128_1, XR
 /*======   Canonical representation   ======*/
 /*! @ingroup XRPL_XXH3_family */
 XRPL_XXH_PUBLIC_API void
-XRPL_XXH128_canonicalFromHash(XRPL_XXH_NOESCAPE XRPL_XXH128_canonical_t* dst, XRPL_XXH128_hash_t hash)
+XXH128_canonicalFromHash(XRPL_XXH_NOESCAPE XXH128_canonical_t* dst, XXH128_hash_t hash)
 {
-    XRPL_XXH_STATIC_ASSERT(sizeof(XRPL_XXH128_canonical_t) == sizeof(XRPL_XXH128_hash_t));
+    XRPL_XXH_STATIC_ASSERT(sizeof(XXH128_canonical_t) == sizeof(XXH128_hash_t));
     if (XRPL_XXH_CPU_LITTLE_ENDIAN) {
         hash.high64 = XRPL_XXH_swap64(hash.high64);
         hash.low64  = XRPL_XXH_swap64(hash.low64);
@@ -6682,10 +6677,10 @@ XRPL_XXH128_canonicalFromHash(XRPL_XXH_NOESCAPE XRPL_XXH128_canonical_t* dst, XR
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH128_hash_t
-XRPL_XXH128_hashFromCanonical(XRPL_XXH_NOESCAPE const XRPL_XXH128_canonical_t* src)
+XRPL_XXH_PUBLIC_API XXH128_hash_t
+XXH128_hashFromCanonical(XRPL_XXH_NOESCAPE const XXH128_canonical_t* src)
 {
-    XRPL_XXH128_hash_t h;
+    XXH128_hash_t h;
     h.high64 = XRPL_XXH_readBE64(src);
     h.low64  = XRPL_XXH_readBE64(src->digest + 8);
     return h;
@@ -6699,23 +6694,23 @@ XRPL_XXH128_hashFromCanonical(XRPL_XXH_NOESCAPE const XRPL_XXH128_canonical_t* s
  */
 #define XRPL_XXH_MIN(x, y) (((x) > (y)) ? (y) : (x))
 
-XRPL_XXH_FORCE_INLINE void XRPL_XXH3_combine16(void* dst, XRPL_XXH128_hash_t h128)
+XRPL_XXH_FORCE_INLINE void XRPL_XXH3_combine16(void* dst, XXH128_hash_t h128)
 {
     XRPL_XXH_writeLE64( dst, XRPL_XXH_readLE64(dst) ^ h128.low64 );
     XRPL_XXH_writeLE64( (char*)dst+8, XRPL_XXH_readLE64((char*)dst+8) ^ h128.high64 );
 }
 
 /*! @ingroup XRPL_XXH3_family */
-XRPL_XXH_PUBLIC_API XRPL_XXH_errorcode
-XRPL_XXH3_generateSecret(XRPL_XXH_NOESCAPE void* secretBuffer, size_t secretSize, XRPL_XXH_NOESCAPE const void* customSeed, size_t customSeedSize)
+XRPL_XXH_PUBLIC_API XXH_errorcode
+XXH3_generateSecret(XRPL_XXH_NOESCAPE void* secretBuffer, size_t secretSize, XRPL_XXH_NOESCAPE const void* customSeed, size_t customSeedSize)
 {
 #if (XRPL_XXH_DEBUGLEVEL >= 1)
     XRPL_XXH_ASSERT(secretBuffer != NULL);
     XRPL_XXH_ASSERT(secretSize >= XRPL_XXH3_SECRET_SIZE_MIN);
 #else
     /* production mode, assert() are disabled */
-    if (secretBuffer == NULL) return XRPL_XXH_ERROR;
-    if (secretSize < XRPL_XXH3_SECRET_SIZE_MIN) return XRPL_XXH_ERROR;
+    if (secretBuffer == NULL) return XXH_ERROR;
+    if (secretSize < XRPL_XXH3_SECRET_SIZE_MIN) return XXH_ERROR;
 #endif
 
     if (customSeedSize == 0) {
@@ -6725,7 +6720,7 @@ XRPL_XXH3_generateSecret(XRPL_XXH_NOESCAPE void* secretBuffer, size_t secretSize
 #if (XRPL_XXH_DEBUGLEVEL >= 1)
     XRPL_XXH_ASSERT(customSeed != NULL);
 #else
-    if (customSeed == NULL) return XRPL_XXH_ERROR;
+    if (customSeed == NULL) return XXH_ERROR;
 #endif
 
     /* Fill secretBuffer with a copy of customSeed - repeat as needed */
@@ -6738,21 +6733,21 @@ XRPL_XXH3_generateSecret(XRPL_XXH_NOESCAPE void* secretBuffer, size_t secretSize
 
     {   size_t const nbSeg16 = secretSize / 16;
         size_t n;
-        XRPL_XXH128_canonical_t scrambler;
-        XRPL_XXH128_canonicalFromHash(&scrambler, XRPL_XXH128(customSeed, customSeedSize, 0));
+        XXH128_canonical_t scrambler;
+        XXH128_canonicalFromHash(&scrambler, XXH128(customSeed, customSeedSize, 0));
         for (n=0; n<nbSeg16; n++) {
-            XRPL_XXH128_hash_t const h128 = XRPL_XXH128(&scrambler, sizeof(scrambler), n);
+            XXH128_hash_t const h128 = XXH128(&scrambler, sizeof(scrambler), n);
             XRPL_XXH3_combine16((char*)secretBuffer + n*16, h128);
         }
         /* last segment */
-        XRPL_XXH3_combine16((char*)secretBuffer + secretSize - 16, XRPL_XXH128_hashFromCanonical(&scrambler));
+        XRPL_XXH3_combine16((char*)secretBuffer + secretSize - 16, XXH128_hashFromCanonical(&scrambler));
     }
-    return XRPL_XXH_OK;
+    return XXH_OK;
 }
 
 /*! @ingroup XRPL_XXH3_family */
 XRPL_XXH_PUBLIC_API void
-XRPL_XXH3_generateSecret_fromSeed(XRPL_XXH_NOESCAPE void* secretBuffer, XRPL_XXH64_hash_t seed)
+XXH3_generateSecret_fromSeed(XRPL_XXH_NOESCAPE void* secretBuffer, XXH64_hash_t seed)
 {
     XRPL_XXH_ALIGN(XRPL_XXH_SEC_ALIGN) xxh_u8 secret[XRPL_XXH_SECRET_DEFAULT_SIZE];
     XRPL_XXH3_initCustomSecret(secret, seed);

@@ -1147,7 +1147,18 @@ accountSend(
     beast::Journal j,
     WaiveTransferFee waiveFee)
 {
-    assert(saAmount >= beast::zero);
+    if (auto const& rules = getCurrentTransactionRules();
+        rules && rules->enabled(fixAMMRounding))
+    {
+        if (saAmount < beast::zero)
+        {
+            return tecINTERNAL;
+        }
+    }
+    else
+    {
+        assert(saAmount >= beast::zero);
+    }
 
     /* If we aren't sending anything or if the sender is the same as the
      * receiver then we don't need to do anything.

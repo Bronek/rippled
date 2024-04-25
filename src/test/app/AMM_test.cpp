@@ -3632,7 +3632,7 @@ private:
                 {
                     BEAST_EXPECT(ammAlice.expectBalances(
                         XRP(10'100),
-                        STAmount(USD, 10'000'00000000001, -11),
+                        STAmount(USD, UINT64_C(10'000'00000000001), -11),
                         ammAlice.tokens()));
                     BEAST_EXPECT(expectLine(
                         env,
@@ -4044,7 +4044,7 @@ private:
                     env,
                     alice,
                     1,
-                    {{{STAmount{EUR, 39'1858572, -7},
+                    {{{STAmount{EUR, UINT64_C(39'1858572), -7},
                        XRPAmount{27'989'898}}}}));
             },
             std::nullopt,
@@ -4633,10 +4633,10 @@ private:
             else
             {
                 BEAST_EXPECT(expectLine(
-                    env, bob, STAmount(EUR, 1989'999999999999, -12)));
+                    env, bob, STAmount(EUR, UINT64_C(1989'999999999999), -12)));
                 BEAST_EXPECT(ammAlice.expectBalances(
                     USD(1'000),
-                    STAmount(EUR, 1005'000000000001, -12),
+                    STAmount(EUR, UINT64_C(1005'000000000001), -12),
                     ammAlice.tokens()));
             }
             BEAST_EXPECT(expectOffers(env, carol, 0));

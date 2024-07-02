@@ -287,15 +287,6 @@ public:
             }
         }
 
-        // Check for duplicate connection
-        if (slots_.find(remote_endpoint) != slots_.end())
-        {
-            JLOG(m_journal.debug())
-                << beast::leftw(18) << "Logic dropping " << remote_endpoint
-                << " as duplicate incoming";
-            return SlotImp::ptr();
-        }
-
         // Create the slot
         SlotImp::ptr const slot(std::make_shared<SlotImp>(
             local_endpoint,

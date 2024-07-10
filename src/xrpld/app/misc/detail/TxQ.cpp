@@ -1551,7 +1551,11 @@ TxQ::accept(Application& app, OpenView& view)
     // parent hash, so that transactions paying the same fee are
     // reordered.
     LedgerHash const& parentHash = view.info().parentHash;
+
 #if !NDEBUG
+    JLOG(j_.debug()) << "Switching ledger from " << parentHash_ << " to "
+                     << parentHash;
+
     auto const startingSize = byFee_.size();
     XRPL_ASSERT(parentHash != parentHash_);
     parentHash_ = parentHash;

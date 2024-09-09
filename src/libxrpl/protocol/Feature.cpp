@@ -326,7 +326,12 @@ FeatureCollections::featureToName(uint256 const& f) const
     return feature ? feature->name : to_string(f);
 }
 
-static FeatureCollections featureCollections;
+static FeatureCollections&
+featureCollections()
+{
+    static FeatureCollections data;
+    return data;
+}
 
 }  // namespace
 
@@ -334,7 +339,7 @@ static FeatureCollections featureCollections;
 std::map<std::string, AmendmentSupport> const&
 allAmendments()
 {
-    return featureCollections.allAmendments();
+    return featureCollections().allAmendments();
 }
 
 /** Amendments that this server supports.
@@ -343,21 +348,21 @@ allAmendments()
 std::map<std::string, VoteBehavior> const&
 detail::supportedAmendments()
 {
-    return featureCollections.supportedAmendments();
+    return featureCollections().supportedAmendments();
 }
 
 /** Amendments that this server won't vote for by default. */
 std::size_t
 detail::numDownVotedAmendments()
 {
-    return featureCollections.numDownVotedAmendments();
+    return featureCollections().numDownVotedAmendments();
 }
 
 /** Amendments that this server will vote for by default. */
 std::size_t
 detail::numUpVotedAmendments()
 {
-    return featureCollections.numUpVotedAmendments();
+    return featureCollections().numUpVotedAmendments();
 }
 
 //------------------------------------------------------------------------------
@@ -365,13 +370,13 @@ detail::numUpVotedAmendments()
 std::optional<uint256>
 getRegisteredFeature(std::string const& name)
 {
-    return featureCollections.getRegisteredFeature(name);
+    return featureCollections().getRegisteredFeature(name);
 }
 
 uint256
 registerFeature(std::string const& name, Supported support, VoteBehavior vote)
 {
-    return featureCollections.registerFeature(name, support, vote);
+    return featureCollections().registerFeature(name, support, vote);
 }
 
 // Retired features are in the ledger and have no code controlled by the
@@ -386,25 +391,25 @@ retireFeature(std::string const& name)
 bool
 registrationIsDone()
 {
-    return featureCollections.registrationIsDone();
+    return featureCollections().registrationIsDone();
 }
 
 size_t
 featureToBitsetIndex(uint256 const& f)
 {
-    return featureCollections.featureToBitsetIndex(f);
+    return featureCollections().featureToBitsetIndex(f);
 }
 
 uint256
 bitsetIndexToFeature(size_t i)
 {
-    return featureCollections.bitsetIndexToFeature(i);
+    return featureCollections().bitsetIndexToFeature(i);
 }
 
 std::string
 featureToName(uint256 const& f)
 {
-    return featureCollections.featureToName(f);
+    return featureCollections().featureToName(f);
 }
 
 // clang-format off
@@ -439,6 +444,6 @@ uint256 const
 // Use initialization of one final static variable to set
 // featureCollections::readOnly.
 [[maybe_unused]] static const bool readOnlySet =
-    featureCollections.registrationIsDone();
+    featureCollections().registrationIsDone();
 
 }  // namespace ripple

@@ -290,12 +290,14 @@ public:
     static std::map<int, SField const*> const&
     getKnownCodeToField()
     {
-        return knownCodeToField;
+        return knownCodeToField();
     }
 
 private:
+    static std::map<int, SField const*>&
+    knownCodeToField();
+
     static int num;
-    static std::map<int, SField const*> knownCodeToField;
 };
 
 /** A field with a type known at compile time. */

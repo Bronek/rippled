@@ -28,7 +28,13 @@ namespace ripple {
 // Storage for static const members.
 SField::IsSigning const SField::notSigning;
 int SField::num = 0;
-std::map<int, SField const*> SField::knownCodeToField;
+
+std::map<int, SField const*>&
+SField::knownCodeToField()
+{
+    static std::map<int, SField const*> data;
+    return data;
+}
 
 // Give only this translation unit permission to construct SFields
 template <class T>
@@ -55,7 +61,7 @@ SField::SField(
     , signingField(signing)
     , jsonName(fieldName.c_str())
 {
-    knownCodeToField[fieldCode] = this;
+    knownCodeToField()[fieldCode] = this;
 }
 
 SField::SField(int fc)
@@ -67,15 +73,15 @@ SField::SField(int fc)
     , signingField(IsSigning::yes)
     , jsonName(fieldName.c_str())
 {
-    knownCodeToField[fieldCode] = this;
+    knownCodeToField()[fieldCode] = this;
 }
 
 SField const&
 SField::getField(int code)
 {
-    auto it = knownCodeToField.find(code);
+    auto it = knownCodeToField().find(code);
 
-    if (it != knownCodeToField.end())
+    if (it != knownCodeToField().end())
     {
         return *(it->second);
     }
@@ -101,7 +107,7 @@ SField::compare(SField const& f1, SField const& f2)
 SField const&
 SField::getField(std::string const& fieldName)
 {
-    for (auto const& [_, f] : knownCodeToField)
+    for (auto const& [_, f] : knownCodeToField())
     {
         (void)_;
         if (f->fieldName == fieldName)

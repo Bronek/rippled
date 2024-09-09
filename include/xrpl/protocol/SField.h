@@ -172,17 +172,14 @@ public:
     operator=(SField&&) = delete;
 
 public:
-    struct private_access_tag_t;  // public, but still an implementation detail
-
     // These constructors can only be called from SField.cpp
     SField(
-        private_access_tag_t,
         SerializedTypeID tid,
         int fv,
         const char* fn,
         int meta = sMD_Default,
         IsSigning signing = IsSigning::yes);
-    explicit SField(private_access_tag_t, int fc);
+    explicit SField(int fc);
 
     static const SField&
     getField(int fieldCode);
@@ -308,7 +305,7 @@ struct TypedField : SField
     using type = T;
 
     template <class... Args>
-    explicit TypedField(private_access_tag_t pat, Args&&... args);
+    explicit TypedField(Args&&... args);
 };
 
 /** Indicate std::optional field semantics. */
@@ -356,28 +353,21 @@ using SF_XCHAIN_BRIDGE = TypedField<STXChainBridge>;
 //------------------------------------------------------------------------------
 
 // Use macros for most SField construction to enforce naming conventions.
-#pragma push_macro("UNTYPED_SFIELD")
-#undef UNTYPED_SFIELD
-
 #define UNTYPED_SFIELD(name, stiSuffix, fieldValue, ...) \
-    extern SField const sf##name;
-
-#pragma push_macro("TYPED_SFIELD")
-#undef TYPED_SFIELD
-
+    inline const SField sf##name(                        \
+        STI_##stiSuffix, fieldValue, #name, ##__VA_ARGS__);
 #define TYPED_SFIELD(name, stiSuffix, fieldValue, ...) \
-    extern SF_##stiSuffix const sf##name;
+    inline const SF_##stiSuffix sf##name(              \
+        STI_##stiSuffix, fieldValue, #name, ##__VA_ARGS__);
 
-extern SField const sfInvalid;
-extern SField const sfGeneric;
+inline const SField sfInvalid(-1);
+inline const SField sfGeneric(0);
+inline const SField sfHash(STI_UINT256, 257, "hash");
 
 #include <xrpl/protocol/sfields.h>
 
 #undef TYPED_SFIELD
 #undef UNTYPED_SFIELD
-
-#pragma pop_macro("TYPED_SFIELD")
-#pragma pop_macro("UNTYPED_SFIELD")
 
 }  // namespace ripple
 

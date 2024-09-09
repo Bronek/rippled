@@ -69,6 +69,10 @@ namespace ripple {
 
 enum class VoteBehavior : int { Obsolete = -1, DefaultNo = 0, DefaultYes };
 enum class AmendmentSupport : int { Retired = -1, Supported = 0, Unsupported };
+enum class Supported : bool { no = false, yes };
+
+uint256
+registerFeature(std::string const& name, Supported support, VoteBehavior vote);
 
 /** All amendments libxrpl knows about. */
 std::map<std::string, AmendmentSupport> const&
@@ -308,20 +312,17 @@ foreachFeature(FeatureBitset bs, F&& f)
             f(bitsetIndexToFeature(i));
 }
 
-#pragma push_macro("XRPL_FEATURE")
-#undef XRPL_FEATURE
-#pragma push_macro("XRPL_FIX")
-#undef XRPL_FIX
-
-#define XRPL_FEATURE(name, supported, vote) extern uint256 const feature##name;
-#define XRPL_FIX(name, supported, vote) extern uint256 const fix##name;
+#define XRPL_FEATURE(name, supported, vote) \
+    inline const uint256 feature##name =    \
+        registerFeature(#name, supported, vote);
+#define XRPL_FIX(name, supported, vote) \
+    inline const uint256 fix##name =    \
+        registerFeature("fix" #name, supported, vote);
 
 #include <xrpl/protocol/features.h>
 
 #undef XRPL_FIX
-#pragma pop_macro("XRPL_FIX")
 #undef XRPL_FEATURE
-#pragma pop_macro("XRPL_FEATURE")
 
 }  // namespace ripple
 

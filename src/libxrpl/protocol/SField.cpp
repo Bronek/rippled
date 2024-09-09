@@ -31,53 +31,16 @@ int SField::num = 0;
 std::map<int, SField const*> SField::knownCodeToField;
 
 // Give only this translation unit permission to construct SFields
-struct SField::private_access_tag_t
-{
-    explicit private_access_tag_t() = default;
-};
-
-static SField::private_access_tag_t access;
-
 template <class T>
 template <class... Args>
-TypedField<T>::TypedField(private_access_tag_t pat, Args&&... args)
-    : SField(pat, std::forward<Args>(args)...)
+TypedField<T>::TypedField(Args&&... args) : SField(std::forward<Args>(args)...)
 {
 }
 
 // Construct all compile-time SFields, and register them in the knownCodeToField
 // database:
 
-// Use macros for most SField construction to enforce naming conventions.
-#pragma push_macro("UNTYPED_SFIELD")
-#undef UNTYPED_SFIELD
-
-#define UNTYPED_SFIELD(name, stiSuffix, fieldValue, ...) \
-    SField const sf##name(                               \
-        access, STI_##stiSuffix, fieldValue, #name, ##__VA_ARGS__);
-
-#pragma push_macro("TYPED_SFIELD")
-#undef TYPED_SFIELD
-
-#define TYPED_SFIELD(name, stiSuffix, fieldValue, ...) \
-    SF_##stiSuffix const sf##name(                     \
-        access, STI_##stiSuffix, fieldValue, #name, ##__VA_ARGS__);
-
-// SFields which, for historical reasons, do not follow naming conventions.
-SField const sfInvalid(access, -1);
-SField const sfGeneric(access, 0);
-SField const sfHash(access, STI_UINT256, 257, "hash");
-
-#include <xrpl/protocol/sfields.h>
-
-#undef TYPED_SFIELD
-#undef UNTYPED_SFIELD
-
-#pragma pop_macro("TYPED_SFIELD")
-#pragma pop_macro("UNTYPED_SFIELD")
-
 SField::SField(
-    private_access_tag_t,
     SerializedTypeID tid,
     int fv,
     const char* fn,
@@ -95,7 +58,7 @@ SField::SField(
     knownCodeToField[fieldCode] = this;
 }
 
-SField::SField(private_access_tag_t, int fc)
+SField::SField(int fc)
     : fieldCode(fc)
     , fieldType(STI_UNKNOWN)
     , fieldValue(0)

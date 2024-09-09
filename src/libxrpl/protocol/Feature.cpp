@@ -43,8 +43,6 @@ hash_value(ripple::uint256 const& feature)
 
 namespace {
 
-enum class Supported : bool { no = false, yes };
-
 // *NOTE*
 //
 // Features, or Amendments as they are called elsewhere, are enabled on the
@@ -408,26 +406,6 @@ featureToName(uint256 const& f)
 {
     return featureCollections.featureToName(f);
 }
-
-// All known amendments must be registered either here or below with the
-// "retired" amendments
-
-#pragma push_macro("XRPL_FEATURE")
-#undef XRPL_FEATURE
-#pragma push_macro("XRPL_FIX")
-#undef XRPL_FIX
-
-#define XRPL_FEATURE(name, supported, vote) \
-    uint256 const feature##name = registerFeature(#name, supported, vote);
-#define XRPL_FIX(name, supported, vote) \
-    uint256 const fix##name = registerFeature("fix" #name, supported, vote);
-
-#include <xrpl/protocol/features.h>
-
-#undef XRPL_FIX
-#pragma pop_macro("XRPL_FIX")
-#undef XRPL_FEATURE
-#pragma pop_macro("XRPL_FEATURE")
 
 // clang-format off
 

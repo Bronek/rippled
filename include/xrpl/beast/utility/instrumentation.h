@@ -22,18 +22,12 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 #include <cassert>
 
-#ifdef ENABLE_VOIDSTAR
-#ifdef NDEBUG
-#error "Antithesis instrumentation requires Debug build"
+#ifndef ENABLE_VOIDSTAR
+#define NO_ANTITHESIS_SDK
+#define ANTITHESIS_SDK_POLYFILL(expr, name, ...) assert((name) && (expr))
 #endif
+
 #include <antithesis_sdk.h>
-#else
-#define ALWAYS(cond, name, ...) assert((name) && (cond))
-#define ALWAYS_OR_UNREACHABLE(cond, name, ...) assert((name) && (cond))
-#define SOMETIMES(cond, name, ...)
-#define REACHABLE(name, ...)
-#define UNREACHABLE(name, ...) assert((name) && false)
-#endif
 
 #define ASSERT ALWAYS_OR_UNREACHABLE
 

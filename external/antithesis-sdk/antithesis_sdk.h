@@ -60,27 +60,36 @@ namespace antithesis {
 
 #if defined(NO_ANTITHESIS_SDK) || __cplusplus < 202000L || (defined(__clang__) && __clang_major__ < 16)
 
+#ifndef NO_ANTITHESIS_SDK
 #if __cplusplus < 202000L
     #error "The Antithesis C++ API requires C++20 or higher"
 #endif
 #if defined(__clang__) && __clang_major__ < 16
     #error "The Antithesis C++ API requires clang version 16 or higher"
 #endif
+#endif
 
-#define ALWAYS(cond, message, ...)
-#define ALWAYS_OR_UNREACHABLE(cond, message, ...)
+#ifndef ANTITHESIS_SDK_POLYFILL
+#define ANTITHESIS_SDK_POLYFILL
+#endif
+
+#define ALWAYS(cond, message, ...) ANTITHESIS_SDK_POLYFILL(cond, message, __VA_ARGS__)
+#define ALWAYS_OR_UNREACHABLE(cond, message, ...) ANTITHESIS_SDK_POLYFILL(cond, message, __VA_ARGS__)
 #define SOMETIMES(cond, message, ...)
 #define REACHABLE(message, ...)
-#define UNREACHABLE(message, ...)
-#define ALWAYS_GREATER_THAN(val, threshold, message, ...)
-#define ALWAYS_GREATER_THAN_OR_EQUAL_TO(val, threshold, message, ...)
+#define UNREACHABLE(message, ...) ANTITHESIS_SDK_POLYFILL(false, message, __VA_ARGS__)
+#define ALWAYS_GREATER_THAN(val, threshold, message, ...) ANTITHESIS_SDK_POLYFILL((val > threshold), message, __VA_ARGS__)
+#define ALWAYS_GREATER_THAN_OR_EQUAL_TO(val, threshold, message, ...) ANTITHESIS_SDK_POLYFILL((val >= threshold), message, __VA_ARGS__)
 #define SOMETIMES_GREATER_THAN(val, threshold, message, ...)
 #define SOMETIMES_GREATER_THAN_OR_EQUAL_TO(val, threshold, message, ...)
-#define ALWAYS_LESS_THAN(val, threshold, message, ...)
-#define ALWAYS_LESS_THAN_OR_EQUAL_TO(val, threshold, message, ...)
+#define ALWAYS_LESS_THAN(val, threshold, message, ...) ANTITHESIS_SDK_POLYFILL((val < threshold), message, __VA_ARGS__)
+#define ALWAYS_LESS_THAN_OR_EQUAL_TO(val, threshold, message, ...) ANTITHESIS_SDK_POLYFILL((val <= threshold), message, __VA_ARGS__)
 #define SOMETIMES_LESS_THAN(val, threshold, message, ...)
 #define SOMETIMES_LESS_THAN_OR_EQUAL_TO(val, threshold, message, ...)
-#define ALWAYS_SOME(pairs, message, ...)
+#define ALWAYS_SOME(pairs, message, ...) ANTITHESIS_SDK_POLYFILL([&](){ \
+    for (std::pair<std::string, bool> pair : pairs) \
+        if (pair.second) return true; \
+    return false; }(), message, __VA_ARGS__)
 #define SOMETIMES_ALL(pairs, message, ...)
 
 namespace antithesis {

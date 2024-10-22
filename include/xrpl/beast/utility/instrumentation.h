@@ -23,6 +23,9 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <cassert>
 
 #ifndef ENABLE_VOIDSTAR
+#ifdef _MSC_VER
+#define ssize_t std::size_t
+#endif
 #define NO_ANTITHESIS_SDK
 #define ANTITHESIS_SDK_POLYFILL(expr, name, ...) assert((name) && (expr))
 #endif

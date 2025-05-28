@@ -1744,13 +1744,16 @@ Consensus<Adaptor>::haveConsensus(
     JLOG(j_.debug()) << "Checking for TX consensus: agree=" << agree
                      << ", disagree=" << disagree;
 
+    // First validation not blocked by the number of proposals vs the UNL size
+    std::size_t const validationKeysSize =
+        adaptor_.haveValidated() ? adaptor_.getQuorumKeys().second.size() : 0;
     // Determine if we actually have consensus or not
     result_->state = checkConsensus(
         prevProposers_,
         agree + disagree,
         agree,
         currentFinished,
-        adaptor_.getQuorumKeys().second.size(),
+        validationKeysSize,
         prevRoundTime_,
         result_->roundTime.read(),
         adaptor_.parms(),

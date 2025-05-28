@@ -19,6 +19,7 @@
 
 #include <xrpld/consensus/Consensus.h>
 #include <xrpl/basics/Log.h>
+#include <chrono>
 
 namespace ripple {
 
@@ -106,6 +107,7 @@ checkConsensusReached(
     std::size_t agreeing,
     std::size_t total,
     bool count_self,
+    std::size_t validationKeysSize,
     std::size_t minConsensusPct,
     bool reachedMax,
     std::unique_ptr<std::stringstream> const& clog)
@@ -145,6 +147,28 @@ checkConsensusReached(
                    << total << ". ";
     }
 
+    // This check prevents forking of the network, by requiring proposals from
+    // 1 + 50% of validators (truncating math) before we proceed to agree on
+    // consensus.
+    // If this node is a validator then validationKeysSize includes our key and
+    // total also includes us.
+    // If this node is a non-validator, the math stays the same, but neither the
+    // total nor validationKeysSize include us.
+    //
+    // keys | minimum
+    //    1 | 1
+    //    2 | 2 (myself and the peer)
+    //    3 | 2 (myself and one of the peers)
+    //    4 | 3 (myself and two peers)
+    //    5 | 3 (myself and two peers)
+    //    6 | 4 (myself and three peers)
+    std::size_t minimum = 1 + (validationKeysSize / 2);
+    if (total < minimum)
+    {
+        CLOG(clog) << total << " less than minimum of " << minimum;
+        return false;
+    }
+
     std::size_t currentPercentage = (agreeing * 100) / total;
     CLOG(clog) << "currentPercentage: " << currentPercentage;
     bool const ret = currentPercentage >= minConsensusPct;
@@ -165,6 +189,7 @@ checkConsensus(
     std::size_t currentProposers,
     std::size_t currentAgree,
     std::size_t currentFinished,
+    std::size_t validationKeysSize,
     std::chrono::milliseconds previousAgreeTime,
     std::chrono::milliseconds currentAgreeTime,
     ConsensusParms const& parms,
@@ -173,14 +198,15 @@ checkConsensus(
     std::unique_ptr<std::stringstream> const& clog)
 {
     CLOG(clog) << "checkConsensus: prop=" << currentProposers << "/"
-               << prevProposers << " agree=" << currentAgree
-               << " validated=" << currentFinished
+               << prevProposers << " agree=" << currentAgree  //
+               << " validated=" << currentFinished            //
+               << " keysSize=" << validationKeysSize          //
                << " time=" << currentAgreeTime.count() << "/"
-               << previousAgreeTime.count() << " proposing? " << proposing
+               << previousAgreeTime.count() << " proposing? " << proposing  //
                << " minimum duration to reach consensus: "
-               << parms.ledgerMIN_CONSENSUS.count() << "ms"
+               << parms.ledgerMIN_CONSENSUS.count() << "ms"  //
                << " max consensus time " << parms.ledgerMAX_CONSENSUS.count()
-               << "s"
+               << "s"  //
                << " minimum consensus percentage: " << parms.minCONSENSUS_PCT
                << ". ";
 
@@ -208,6 +234,7 @@ checkConsensus(
             currentAgree,
             currentProposers,
             proposing,
+            validationKeysSize,
             parms.minCONSENSUS_PCT,
             currentAgreeTime > parms.ledgerMAX_CONSENSUS,
             clog))
@@ -223,6 +250,7 @@ checkConsensus(
             currentFinished,
             currentProposers,
             false,
+            validationKeysSize,
             parms.minCONSENSUS_PCT,
             currentAgreeTime > parms.ledgerMAX_CONSENSUS,
             clog))

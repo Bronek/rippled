@@ -85,39 +85,39 @@ public:
         // Not enough time has elapsed
         BEAST_EXPECT(
             ConsensusState::No ==
-            checkConsensus(10, 2, 2, 0, 3s, 2s, p, true, journal_));
+            checkConsensus(10, 2, 2, 0, 0, 3s, 2s, p, true, journal_));
 
         // If not enough peers have propsed, ensure
         // more time for proposals
         BEAST_EXPECT(
             ConsensusState::No ==
-            checkConsensus(10, 2, 2, 0, 3s, 4s, p, true, journal_));
+            checkConsensus(10, 2, 2, 0, 0, 3s, 4s, p, true, journal_));
 
         // Enough time has elapsed and we all agree
         BEAST_EXPECT(
             ConsensusState::Yes ==
-            checkConsensus(10, 2, 2, 0, 3s, 10s, p, true, journal_));
+            checkConsensus(10, 2, 2, 0, 0, 3s, 10s, p, true, journal_));
 
         // Enough time has elapsed and we don't yet agree
         BEAST_EXPECT(
             ConsensusState::No ==
-            checkConsensus(10, 2, 1, 0, 3s, 10s, p, true, journal_));
+            checkConsensus(10, 2, 1, 0, 0, 3s, 10s, p, true, journal_));
 
         // Our peers have moved on
         // Enough time has elapsed and we all agree
         BEAST_EXPECT(
             ConsensusState::MovedOn ==
-            checkConsensus(10, 2, 1, 8, 3s, 10s, p, true, journal_));
+            checkConsensus(10, 2, 1, 8, 0, 3s, 10s, p, true, journal_));
 
         // If no peers, don't agree until time has passed.
         BEAST_EXPECT(
             ConsensusState::No ==
-            checkConsensus(0, 0, 0, 0, 3s, 10s, p, true, journal_));
+            checkConsensus(0, 0, 0, 0, 0, 3s, 10s, p, true, journal_));
 
         // Agree if no peers and enough time has passed.
         BEAST_EXPECT(
             ConsensusState::Yes ==
-            checkConsensus(0, 0, 0, 0, 3s, 16s, p, true, journal_));
+            checkConsensus(0, 0, 0, 0, 0, 3s, 16s, p, true, journal_));
     }
 
     void

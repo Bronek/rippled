@@ -63,18 +63,33 @@ CreateOffer::preflight(PreflightContext const& ctx)
     auto& j = ctx.j;
 
     std::uint32_t const uTxFlags = tx.getFlags();
+    std::uint32_t const mask = [&]() {
+        if (ctx.rules.enabled(featurePermissionedDEX) &&
+            ctx.tx.isFieldPresent(sfDomainID))
+            return tfOfferCreateMask;
+        std::cerr << std::hex << (tfOfferCreateMask & ~tfHybrid) << '\n';
+        return tfOfferCreateMask & ~tfHybrid;
+    }();
 
-    if (uTxFlags & tfOfferCreateMask)
+    // if (uTxFlags & tfOfferCreateMask)
+    if (uTxFlags & mask)
     {
+        std::cerr << "fail " << ctx.rules.enabled(featurePermissionedDEX) << " "
+                  << ctx.tx.isFieldPresent(sfDomainID) << " "
+                  << tx.isFlag(tfHybrid) << " " << std::hex << mask << '\n';
+
         JLOG(j.debug()) << "Malformed transaction: Invalid flags set.";
         return temINVALID_FLAG;
     }
+    std::cerr << "pass " << ctx.rules.enabled(featurePermissionedDEX) << " "
+              << ctx.tx.isFieldPresent(sfDomainID) << " " << tx.isFlag(tfHybrid)
+              << " " << std::hex << mask << '\n';
 
-    if (!ctx.rules.enabled(featurePermissionedDEX) && tx.isFlag(tfHybrid))
-        return temINVALID_FLAG;
+    // if (!ctx.rules.enabled(featurePermissionedDEX) && tx.isFlag(tfHybrid))
+    //     return temINVALID_FLAG;
 
-    if (tx.isFlag(tfHybrid) && !tx.isFieldPresent(sfDomainID))
-        return temINVALID_FLAG;
+    // if (tx.isFlag(tfHybrid) && !tx.isFieldPresent(sfDomainID))
+    //     return temINVALID_FLAG;
 
     bool const bImmediateOrCancel(uTxFlags & tfImmediateOrCancel);
     bool const bFillOrKill(uTxFlags & tfFillOrKill);

@@ -23,9 +23,8 @@
 #include <xrpld/peerfinder/PeerfinderManager.h>
 #include <xrpld/peerfinder/Slot.h>
 #include <xrpld/peerfinder/detail/Tuning.h>
-#include <xrpl/basics/random.h>
 
-#include <cmath>
+#include <xrpl/basics/random.h>
 
 namespace ripple {
 namespace PeerFinder {
@@ -71,7 +70,9 @@ public:
     can_activate(Slot const& s) const
     {
         // Must be handshaked and in the right state
-        assert(s.state() == Slot::connected || s.state() == Slot::accept);
+        XRPL_ASSERT(
+            s.state() == Slot::connected || s.state() == Slot::accept,
+            "ripple::PeerFinder::Counts::can_activate : valid input state");
 
         if (s.fixed() || s.reserved())
             return true;
@@ -162,7 +163,7 @@ public:
 
     /** Returns the total number of inbound slots. */
     int
-    inboundSlots() const
+    in_max() const
     {
         return m_in_max;
     }
@@ -262,13 +263,18 @@ private:
         switch (s.state())
         {
             case Slot::accept:
-                assert(s.inbound());
+                XRPL_ASSERT(
+                    s.inbound(),
+                    "ripple::PeerFinder::Counts::adjust : input is inbound");
                 m_acceptCount += n;
                 break;
 
             case Slot::connect:
             case Slot::connected:
-                assert(!s.inbound());
+                XRPL_ASSERT(
+                    !s.inbound(),
+                    "ripple::PeerFinder::Counts::adjust : input is not "
+                    "inbound");
                 m_attempts += n;
                 break;
 
@@ -290,7 +296,8 @@ private:
                 break;
 
             default:
-                assert(false);
+                UNREACHABLE(
+                    "ripple::PeerFinder::Counts::adjust : invalid input state");
                 break;
         };
     }

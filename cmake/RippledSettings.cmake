@@ -11,12 +11,22 @@ option(assert "Enables asserts, even in release builds" OFF)
 option(xrpld "Build xrpld" ON)
 
 option(tests "Build tests" ON)
+if(tests)
+  # This setting allows making a separate workflow to test fees other than default 10
+  if(NOT UNIT_TEST_REFERENCE_FEE)
+    set(UNIT_TEST_REFERENCE_FEE "10" CACHE STRING "")
+  endif()
+endif()
 
-option(unity "Creates a build using UNITY support in cmake. This is the default" ON)
+option(unity "Creates a build using UNITY support in cmake." OFF)
 if(unity)
   if(NOT is_ci)
     set(CMAKE_UNITY_BUILD_BATCH_SIZE 15 CACHE STRING "")
   endif()
+  set(CMAKE_UNITY_BUILD ON CACHE BOOL "Do a unity build")
+endif()
+if(is_clang AND is_linux)
+  option(voidstar "Enable Antithesis instrumentation." OFF)
 endif()
 if(is_gcc OR is_clang)
   option(coverage "Generates coverage info." OFF)
@@ -108,7 +118,7 @@ option(beast_no_unit_test_inline
   "Prevents unit test definitions from being inserted into global table"
   OFF)
 option(single_io_service_thread
-  "Restricts the number of threads calling io_service::run to one. \
+  "Restricts the number of threads calling io_context::run to one. \
   This can be useful when debugging."
   OFF)
 option(boost_show_deprecated

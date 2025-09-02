@@ -17,8 +17,10 @@
 
 #include <test/jtx.h>
 #include <test/jtx/utility.h>
-#include <xrpld/net/RPCCall.h>
+
+#include <xrpld/rpc/RPCCall.h>
 #include <xrpld/rpc/detail/RPCHelpers.h>
+
 #include <xrpl/beast/unit_test.h>
 #include <xrpl/json/json_reader.h>
 #include <xrpl/protocol/ErrorCodes.h>
@@ -2458,7 +2460,15 @@ static RPCCallTestData const rpcCallTestArray[] = {
      {"deposit_authorized",
       "source_account_NotValidated",
       "destination_account_NotValidated",
-      "4294967295"},
+      "4294967295",
+      "cred1",
+      "cred2",
+      "cred3",
+      "cred4",
+      "cred5",
+      "cred6",
+      "cred7",
+      "cred8"},
      RPCCallTestData::no_exception,
      R"({
     "method" : "deposit_authorized",
@@ -2467,7 +2477,8 @@ static RPCCallTestData const rpcCallTestArray[] = {
          "api_version" : %API_VER%,
          "destination_account" : "destination_account_NotValidated",
          "ledger_index" : 4294967295,
-         "source_account" : "source_account_NotValidated"
+         "source_account" : "source_account_NotValidated",
+         "credentials": ["cred1", "cred2", "cred3", "cred4", "cred5", "cred6", "cred7", "cred8"]
       }
     ]
     })"},
@@ -2512,7 +2523,15 @@ static RPCCallTestData const rpcCallTestArray[] = {
       "source_account_NotValidated",
       "destination_account_NotValidated",
       "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789",
-      "spare"},
+      "cred1",
+      "cred2",
+      "cred3",
+      "cred4",
+      "cred5",
+      "cred6",
+      "cred7",
+      "cred8",
+      "too_much"},
      RPCCallTestData::no_exception,
      R"({
     "method" : "deposit_authorized",
@@ -5821,7 +5840,7 @@ static RPCCallTestData const rpcCallTestArray[] = {
 };
 
 std::string
-updateAPIVersionString(const char* const req, unsigned apiVersion)
+updateAPIVersionString(char const* const req, unsigned apiVersion)
 {
     std::string const version_str = std::to_string(apiVersion);
     static auto const place_holder = "%API_VER%";
@@ -5864,7 +5883,7 @@ public:
             std::vector<std::string> const args{
                 rpcCallTest.args.begin(), rpcCallTest.args.end()};
 
-            const char* const expVersioned =
+            char const* const expVersioned =
                 (apiVersion - RPC::apiMinimumSupportedVersion) <
                     rpcCallTest.exp.size()
                 ? rpcCallTest.exp[apiVersion - RPC::apiMinimumSupportedVersion]
@@ -5929,7 +5948,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(RPCCall, app, ripple);
+BEAST_DEFINE_TESTSUITE(RPCCall, rpc, ripple);
 
 }  // namespace test
 }  // namespace ripple

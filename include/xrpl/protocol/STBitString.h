@@ -45,8 +45,8 @@ public:
     STBitString() = default;
 
     STBitString(SField const& n);
-    STBitString(const value_type& v);
-    STBitString(SField const& n, const value_type& v);
+    STBitString(value_type const& v);
+    STBitString(SField const& n, value_type const& v);
     STBitString(SerialIter& sit, SField const& name);
 
     SerializedTypeID
@@ -56,7 +56,7 @@ public:
     getText() const override;
 
     bool
-    isEquivalent(const STBase& t) const override;
+    isEquivalent(STBase const& t) const override;
 
     void
     add(Serializer& s) const override;
@@ -84,6 +84,7 @@ private:
 
 using STUInt128 = STBitString<128>;
 using STUInt160 = STBitString<160>;
+using STUInt192 = STBitString<192>;
 using STUInt256 = STBitString<256>;
 
 template <int Bits>
@@ -92,12 +93,12 @@ inline STBitString<Bits>::STBitString(SField const& n) : STBase(n)
 }
 
 template <int Bits>
-inline STBitString<Bits>::STBitString(const value_type& v) : value_(v)
+inline STBitString<Bits>::STBitString(value_type const& v) : value_(v)
 {
 }
 
 template <int Bits>
-inline STBitString<Bits>::STBitString(SField const& n, const value_type& v)
+inline STBitString<Bits>::STBitString(SField const& n, value_type const& v)
     : STBase(n), value_(v)
 {
 }
@@ -138,6 +139,13 @@ STUInt160::getSType() const
 
 template <>
 inline SerializedTypeID
+STUInt192::getSType() const
+{
+    return STI_UINT192;
+}
+
+template <>
+inline SerializedTypeID
 STUInt256::getSType() const
 {
     return STI_UINT256;
@@ -152,9 +160,9 @@ STBitString<Bits>::getText() const
 
 template <int Bits>
 bool
-STBitString<Bits>::isEquivalent(const STBase& t) const
+STBitString<Bits>::isEquivalent(STBase const& t) const
 {
-    const STBitString* v = dynamic_cast<const STBitString*>(&t);
+    STBitString const* v = dynamic_cast<STBitString const*>(&t);
     return v && (value_ == v->value_);
 }
 
@@ -162,8 +170,11 @@ template <int Bits>
 void
 STBitString<Bits>::add(Serializer& s) const
 {
-    assert(getFName().isBinary());
-    assert(getFName().fieldType == getSType());
+    XRPL_ASSERT(
+        getFName().isBinary(), "ripple::STBitString::add : field is binary");
+    XRPL_ASSERT(
+        getFName().fieldType == getSType(),
+        "ripple::STBitString::add : field type match");
     s.addBitString<Bits>(value_);
 }
 

@@ -18,17 +18,20 @@
 //==============================================================================
 
 #include <xrpld/rpc/Role.h>
+
 #include <boost/beast/http/field.hpp>
 #include <boost/utility/string_view.hpp>
+
 #include <algorithm>
-#include <tuple>
 
 namespace ripple {
 
 bool
 passwordUnrequiredOrSentCorrect(Port const& port, Json::Value const& params)
 {
-    assert(!(port.admin_nets_v4.empty() && port.admin_nets_v6.empty()));
+    XRPL_ASSERT(
+        !(port.admin_nets_v4.empty() && port.admin_nets_v6.empty()),
+        "ripple::passwordUnrequiredOrSentCorrect : non-empty admin nets");
     bool const passwordRequired =
         (!port.admin_user.empty() || !port.admin_password.empty());
 

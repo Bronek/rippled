@@ -18,6 +18,7 @@
 //==============================================================================
 
 #include <test/jtx.h>
+
 #include <xrpl/protocol/Feature.h>
 #include <xrpl/protocol/jss.h>
 
@@ -38,8 +39,8 @@ struct SetAuth_test : public beast::unit_test::suite
         using namespace jtx;
         Json::Value jv;
         jv[jss::Account] = account.human();
-        jv[jss::LimitAmount] =
-            STAmount({to_currency(currency), dest}).getJson(JsonOptions::none);
+        jv[jss::LimitAmount] = STAmount(Issue{to_currency(currency), dest})
+                                   .getJson(JsonOptions::none);
         jv[jss::TransactionType] = jss::TrustSet;
         jv[jss::Flags] = tfSetfAuth;
         return jv;
@@ -56,6 +57,7 @@ struct SetAuth_test : public beast::unit_test::suite
 
         env.fund(XRP(100000), "alice", "bob", gw);
         env(fset(gw, asfRequireAuth));
+        env.close();
         env(auth(gw, "alice", "USD"));
         BEAST_EXPECT(
             env.le(keylet::line(Account("alice").id(), gw.id(), USD.currency)));
@@ -72,13 +74,13 @@ struct SetAuth_test : public beast::unit_test::suite
     run() override
     {
         using namespace jtx;
-        auto const sa = supported_amendments();
-        testAuth(sa - featureFlowCross);
+        auto const sa = testable_amendments();
+        testAuth(sa - featurePermissionedDEX);
         testAuth(sa);
     }
 };
 
-BEAST_DEFINE_TESTSUITE(SetAuth, test, ripple);
+BEAST_DEFINE_TESTSUITE(SetAuth, app, ripple);
 
 }  // namespace test
 }  // namespace ripple

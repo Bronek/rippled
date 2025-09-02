@@ -18,6 +18,7 @@
 //==============================================================================
 
 #include <test/json/TestOutputSuite.h>
+
 #include <xrpl/beast/unit_test.h>
 #include <xrpl/json/Object.h>
 
@@ -252,6 +253,6 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(JsonObject, ripple_basics, ripple);
+BEAST_DEFINE_TESTSUITE(JsonObject, json, ripple);
 
 }  // namespace Json

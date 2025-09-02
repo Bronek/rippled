@@ -19,11 +19,8 @@
 
 #include <test/jtx.h>
 #include <test/jtx/WSClient.h>
-#include <xrpl/beast/unit_test.h>
-#include <xrpl/protocol/ErrorCodes.h>
-#include <xrpl/protocol/jss.h>
 
-#include <boost/asio/ip/address_v4.hpp>
+#include <xrpl/beast/unit_test.h>
 
 #include <string>
 #include <unordered_map>
@@ -392,7 +389,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(Roles, app, ripple);
+BEAST_DEFINE_TESTSUITE(Roles, rpc, ripple);
 
 }  // namespace test
 

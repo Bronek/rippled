@@ -17,15 +17,46 @@
 */
 //==============================================================================
 
+#include <xrpl/basics/Blob.h>
 #include <xrpl/basics/Log.h>
+#include <xrpl/basics/Slice.h>
+#include <xrpl/basics/base_uint.h>
+#include <xrpl/basics/contract.h>
+#include <xrpl/beast/utility/instrumentation.h>
+#include <xrpl/json/json_value.h>
+#include <xrpl/protocol/AccountID.h>
 #include <xrpl/protocol/Feature.h>
+#include <xrpl/protocol/HashPrefix.h>
 #include <xrpl/protocol/InnerObjectFormats.h>
 #include <xrpl/protocol/Rules.h>
+#include <xrpl/protocol/SField.h>
+#include <xrpl/protocol/SOTemplate.h>
 #include <xrpl/protocol/STAccount.h>
+#include <xrpl/protocol/STAmount.h>
 #include <xrpl/protocol/STArray.h>
+#include <xrpl/protocol/STBase.h>
+#include <xrpl/protocol/STBitString.h>
 #include <xrpl/protocol/STBlob.h>
 #include <xrpl/protocol/STCurrency.h>
+#include <xrpl/protocol/STInteger.h>
+#include <xrpl/protocol/STIssue.h>
+#include <xrpl/protocol/STNumber.h>
 #include <xrpl/protocol/STObject.h>
+#include <xrpl/protocol/STPathSet.h>
+#include <xrpl/protocol/STVector256.h>
+#include <xrpl/protocol/Serializer.h>
+#include <xrpl/protocol/detail/STVar.h>
+
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace ripple {
 
@@ -122,7 +153,7 @@ STObject::operator=(STObject&& other)
 }
 
 void
-STObject::set(const SOTemplate& type)
+STObject::set(SOTemplate const& type)
 {
     v_.clear();
     v_.reserve(type.size());
@@ -138,7 +169,7 @@ STObject::set(const SOTemplate& type)
 }
 
 void
-STObject::applyTemplate(const SOTemplate& type)
+STObject::applyTemplate(SOTemplate const& type)
 {
     auto throwFieldErr = [](std::string const& field, char const* description) {
         std::stringstream ss;
@@ -265,9 +296,9 @@ STObject::set(SerialIter& sit, int depth)
 }
 
 bool
-STObject::hasMatchingEntry(const STBase& t)
+STObject::hasMatchingEntry(STBase const& t)
 {
-    const STBase* o = peekAtPField(t.getFName());
+    STBase const* o = peekAtPField(t.getFName());
 
     if (!o)
         return false;
@@ -326,9 +357,9 @@ STObject::getText() const
 }
 
 bool
-STObject::isEquivalent(const STBase& t) const
+STObject::isEquivalent(STBase const& t) const
 {
-    const STObject* v = dynamic_cast<const STObject*>(&t);
+    STObject const* v = dynamic_cast<STObject const*>(&t);
 
     if (!v)
         return false;
@@ -394,7 +425,7 @@ STObject::getFieldIndex(SField const& field) const
     return -1;
 }
 
-const STBase&
+STBase const&
 STObject::peekAtField(SField const& field) const
 {
     int index = getFieldIndex(field);
@@ -422,7 +453,7 @@ STObject::getFieldSType(int index) const
     return v_[index]->getFName();
 }
 
-const STBase*
+STBase const*
 STObject::peekAtPField(SField const& field) const
 {
     int index = getFieldIndex(field);
@@ -505,7 +536,7 @@ STObject::isFlag(std::uint32_t f) const
 std::uint32_t
 STObject::getFlags(void) const
 {
-    const STUInt32* t = dynamic_cast<const STUInt32*>(peekAtPField(sfFlags));
+    STUInt32 const* t = dynamic_cast<STUInt32 const*>(peekAtPField(sfFlags));
 
     if (!t)
         return 0;
@@ -543,7 +574,7 @@ STObject::makeFieldAbsent(SField const& field)
     if (index == -1)
         throwFieldNotFound(field);
 
-    const STBase& f = peekAtIndex(index);
+    STBase const& f = peekAtIndex(index);
 
     if (f.getSType() == STI_NOTPRESENT)
         return;
@@ -604,6 +635,12 @@ STObject::getFieldH160(SField const& field) const
     return getFieldByValue<STUInt160>(field);
 }
 
+uint192
+STObject::getFieldH192(SField const& field) const
+{
+    return getFieldByValue<STUInt192>(field);
+}
+
 uint256
 STObject::getFieldH256(SField const& field) const
 {
@@ -638,14 +675,14 @@ STObject::getFieldPathSet(SField const& field) const
     return getFieldByConstRef<STPathSet>(field, empty);
 }
 
-const STVector256&
+STVector256 const&
 STObject::getFieldV256(SField const& field) const
 {
     static STVector256 const empty{};
     return getFieldByConstRef<STVector256>(field, empty);
 }
 
-const STArray&
+STArray const&
 STObject::getFieldArray(SField const& field) const
 {
     static STArray const empty{};
@@ -657,6 +694,13 @@ STObject::getFieldCurrency(SField const& field) const
 {
     static STCurrency const empty{};
     return getFieldByConstRef<STCurrency>(field, empty);
+}
+
+STNumber const&
+STObject::getFieldNumber(SField const& field) const
+{
+    static STNumber const empty{};
+    return getFieldByConstRef<STNumber>(field, empty);
 }
 
 void
@@ -760,6 +804,12 @@ STObject::setFieldIssue(SField const& field, STIssue const& v)
 }
 
 void
+STObject::setFieldNumber(SField const& field, STNumber const& v)
+{
+    setFieldUsingAssignment(field, v);
+}
+
+void
 STObject::setFieldPathSet(SField const& field, STPathSet const& v)
 {
     setFieldUsingAssignment(field, v);
@@ -785,7 +835,7 @@ STObject::getJson(JsonOptions options) const
 }
 
 bool
-STObject::operator==(const STObject& obj) const
+STObject::operator==(STObject const& obj) const
 {
     // This is not particularly efficient, and only compares data elements
     // with binary representations
@@ -842,9 +892,10 @@ STObject::add(Serializer& s, WhichFields whichFields) const
         // the type associated by rule with this field name
         // must be OBJECT, or the object cannot be deserialized
         SerializedTypeID const sType{field->getSType()};
-        assert(
+        XRPL_ASSERT(
             (sType != STI_OBJECT) ||
-            (field->getFName().fieldType == STI_OBJECT));
+                (field->getFName().fieldType == STI_OBJECT),
+            "ripple::STObject::add : valid field type");
         field->addFieldID(s);
         field->add(s);
         if (sType == STI_ARRAY || sType == STI_OBJECT)

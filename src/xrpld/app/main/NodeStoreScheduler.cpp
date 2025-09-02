@@ -18,7 +18,6 @@
 //==============================================================================
 
 #include <xrpld/app/main/NodeStoreScheduler.h>
-#include <cassert>
 
 namespace ripple {
 

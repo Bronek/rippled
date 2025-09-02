@@ -23,10 +23,10 @@
 #include <xrpld/app/ledger/LedgerMaster.h>
 #include <xrpld/app/ledger/TransactionStateSF.h>
 #include <xrpld/app/main/Application.h>
-#include <xrpld/app/misc/NetworkOPs.h>
 #include <xrpld/core/JobQueue.h>
 #include <xrpld/overlay/Overlay.h>
 #include <xrpld/shamap/SHAMapNodeID.h>
+
 #include <xrpl/basics/Log.h>
 #include <xrpl/protocol/HashPrefix.h>
 #include <xrpl/protocol/jss.h>
@@ -120,9 +120,10 @@ InboundLedger::init(ScopedLockType& collectionLock)
 
     JLOG(journal_.debug()) << "Acquiring ledger we already have in "
                            << " local store. " << hash_;
-    assert(
+    XRPL_ASSERT(
         mLedger->info().seq < XRP_LEDGER_EARLIEST_FEES ||
-        mLedger->read(keylet::fees()));
+            mLedger->read(keylet::fees()),
+        "ripple::InboundLedger::init : valid ledger fees");
     mLedger->setImmutable();
 
     if (mReason == Reason::HISTORY)
@@ -351,9 +352,10 @@ InboundLedger::tryDB(NodeStore::Database& srcDB)
     {
         JLOG(journal_.debug()) << "Had everything locally";
         complete_ = true;
-        assert(
+        XRPL_ASSERT(
             mLedger->info().seq < XRP_LEDGER_EARLIEST_FEES ||
-            mLedger->read(keylet::fees()));
+                mLedger->read(keylet::fees()),
+            "ripple::InboundLedger::tryDB : valid ledger fees");
         mLedger->setImmutable();
     }
 }
@@ -447,13 +449,16 @@ InboundLedger::done()
                                       std::to_string(timeouts_) + " "))
                            << mStats.get();
 
-    assert(complete_ || failed_);
+    XRPL_ASSERT(
+        complete_ || failed_,
+        "ripple::InboundLedger::done : complete or failed");
 
     if (complete_ && !failed_ && mLedger)
     {
-        assert(
+        XRPL_ASSERT(
             mLedger->info().seq < XRP_LEDGER_EARLIEST_FEES ||
-            mLedger->read(keylet::fees()));
+                mLedger->read(keylet::fees()),
+            "ripple::InboundLedger::done : valid ledger fees");
         mLedger->setImmutable();
         switch (mReason)
         {
@@ -497,15 +502,17 @@ InboundLedger::trigger(std::shared_ptr<Peer> const& peer, TriggerReason reason)
 
     if (auto stream = journal_.debug())
     {
-        stream << "Trigger acquiring ledger " << hash_;
+        std::stringstream ss;
+        ss << "Trigger acquiring ledger " << hash_;
         if (peer)
-            stream << " from " << peer;
+            ss << " from " << peer;
 
         if (complete_ || failed_)
-            stream << "complete=" << complete_ << " failed=" << failed_;
+            ss << " complete=" << complete_ << " failed=" << failed_;
         else
-            stream << "header=" << mHaveHeader << " tx=" << mHaveTransactions
-                   << " as=" << mHaveState;
+            ss << " header=" << mHaveHeader << " tx=" << mHaveTransactions
+               << " as=" << mHaveState;
+        stream << ss.str();
     }
 
     if (!mHaveHeader)
@@ -613,7 +620,10 @@ InboundLedger::trigger(std::shared_ptr<Peer> const& peer, TriggerReason reason)
     // if we wind up abandoning this fetch.
     if (mHaveHeader && !mHaveState && !failed_)
     {
-        assert(mLedger);
+        XRPL_ASSERT(
+            mLedger,
+            "ripple::InboundLedger::trigger : non-null ledger to read state "
+            "from");
 
         if (!mLedger->stateMap().isValid())
         {
@@ -685,7 +695,10 @@ InboundLedger::trigger(std::shared_ptr<Peer> const& peer, TriggerReason reason)
 
     if (mHaveHeader && !mHaveTransactions && !failed_)
     {
-        assert(mLedger);
+        XRPL_ASSERT(
+            mLedger,
+            "ripple::InboundLedger::trigger : non-null ledger to read "
+            "transactions from");
 
         if (!mLedger->txMap().isValid())
         {
@@ -950,7 +963,7 @@ InboundLedger::takeAsRootNode(Slice const& data, SHAMapAddNode& san)
 
     if (!mHaveHeader)
     {
-        assert(false);
+        UNREACHABLE("ripple::InboundLedger::takeAsRootNode : no ledger header");
         return false;
     }
 
@@ -975,7 +988,7 @@ InboundLedger::takeTxRootNode(Slice const& data, SHAMapAddNode& san)
 
     if (!mHaveHeader)
     {
-        assert(false);
+        UNREACHABLE("ripple::InboundLedger::takeTxRootNode : no ledger header");
         return false;
     }
 
@@ -1063,7 +1076,8 @@ InboundLedger::processData(
         if (packet.nodes().empty())
         {
             JLOG(journal_.warn()) << peer->id() << ": empty header data";
-            peer->charge(Resource::feeInvalidRequest);
+            peer->charge(
+                Resource::feeMalformedRequest, "ledger_data empty header");
             return -1;
         }
 
@@ -1078,7 +1092,9 @@ InboundLedger::processData(
                 if (!takeHeader(packet.nodes(0).nodedata()))
                 {
                     JLOG(journal_.warn()) << "Got invalid header data";
-                    peer->charge(Resource::feeInvalidRequest);
+                    peer->charge(
+                        Resource::feeMalformedRequest,
+                        "ledger_data invalid header");
                     return -1;
                 }
 
@@ -1101,7 +1117,8 @@ InboundLedger::processData(
         {
             JLOG(journal_.warn())
                 << "Included AS/TX root invalid: " << ex.what();
-            peer->charge(Resource::feeBadData);
+            using namespace std::string_literals;
+            peer->charge(Resource::feeInvalidData, "ledger_data "s + ex.what());
             return -1;
         }
 
@@ -1121,7 +1138,7 @@ InboundLedger::processData(
         if (packet.nodes().empty())
         {
             JLOG(journal_.info()) << peer->id() << ": response with no nodes";
-            peer->charge(Resource::feeInvalidRequest);
+            peer->charge(Resource::feeMalformedRequest, "ledger_data no nodes");
             return -1;
         }
 
@@ -1133,7 +1150,8 @@ InboundLedger::processData(
             if (!node.has_nodeid() || !node.has_nodedata())
             {
                 JLOG(journal_.warn()) << "Got bad node";
-                peer->charge(Resource::feeInvalidRequest);
+                peer->charge(
+                    Resource::feeMalformedRequest, "ledger_data bad node");
                 return -1;
             }
         }

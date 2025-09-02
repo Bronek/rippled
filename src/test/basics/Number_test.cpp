@@ -17,10 +17,11 @@
 */
 //==============================================================================
 
-#include <xrpl/basics/IOUAmount.h>
 #include <xrpl/basics/Number.h>
 #include <xrpl/beast/unit_test.h>
+#include <xrpl/protocol/IOUAmount.h>
 #include <xrpl/protocol/STAmount.h>
+
 #include <sstream>
 #include <tuple>
 
@@ -742,6 +743,6 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(Number, ripple_basics, ripple);
+BEAST_DEFINE_TESTSUITE(Number, basics, ripple);
 
 }  // namespace ripple

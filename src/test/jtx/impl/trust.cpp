@@ -18,8 +18,10 @@
 //==============================================================================
 
 #include <test/jtx/trust.h>
+
 #include <xrpl/basics/contract.h>
 #include <xrpl/protocol/jss.h>
+
 #include <stdexcept>
 
 namespace ripple {
@@ -64,12 +66,18 @@ trust(
 }
 
 Json::Value
-claw(Account const& account, STAmount const& amount)
+claw(
+    Account const& account,
+    STAmount const& amount,
+    std::optional<Account> const& mptHolder)
 {
     Json::Value jv;
     jv[jss::Account] = account.human();
     jv[jss::Amount] = amount.getJson(JsonOptions::none);
     jv[jss::TransactionType] = jss::Clawback;
+
+    if (mptHolder)
+        jv[sfHolder.jsonName] = mptHolder->human();
 
     return jv;
 }

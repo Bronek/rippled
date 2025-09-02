@@ -22,11 +22,13 @@
 
 #include <xrpl/server/detail/BaseHTTPPeer.h>
 #include <xrpl/server/detail/SSLWSPeer.h>
+
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
+
 #include <memory>
 
 namespace ripple {
@@ -113,14 +115,14 @@ SSLHTTPPeer<Handler>::run()
 {
     if (!this->handler_.onAccept(this->session(), this->remote_address_))
     {
-        boost::asio::spawn(
+        util::spawn(
             this->strand_,
             std::bind(&SSLHTTPPeer::do_close, this->shared_from_this()));
         return;
     }
     if (!socket_.is_open())
         return;
-    boost::asio::spawn(
+    util::spawn(
         this->strand_,
         std::bind(
             &SSLHTTPPeer::do_handshake,
@@ -162,7 +164,7 @@ SSLHTTPPeer<Handler>::do_handshake(yield_context do_yield)
         this->port().protocol.count("https") > 0;
     if (http)
     {
-        boost::asio::spawn(
+        util::spawn(
             this->strand_,
             std::bind(
                 &SSLHTTPPeer::do_read,

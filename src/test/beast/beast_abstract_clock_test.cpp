@@ -22,6 +22,7 @@
 #include <xrpl/beast/clock/abstract_clock.h>
 #include <xrpl/beast/clock/manual_clock.h>
 #include <xrpl/beast/unit_test.h>
+
 #include <sstream>
 #include <string>
 #include <thread>
@@ -83,6 +84,6 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE_MANUAL(abstract_clock, chrono, beast);
+BEAST_DEFINE_TESTSUITE_MANUAL(abstract_clock, beast, beast);
 
 }  // namespace beast

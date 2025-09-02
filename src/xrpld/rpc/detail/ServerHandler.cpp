@@ -17,18 +17,17 @@
 */
 //==============================================================================
 
-#include <xrpld/rpc/ServerHandler.h>
-
 #include <xrpld/app/main/Application.h>
-#include <xrpld/app/misc/NetworkOPs.h>
 #include <xrpld/core/ConfigSections.h>
 #include <xrpld/core/JobQueue.h>
 #include <xrpld/overlay/Overlay.h>
 #include <xrpld/rpc/RPCHandler.h>
 #include <xrpld/rpc/Role.h>
+#include <xrpld/rpc/ServerHandler.h>
 #include <xrpld/rpc/detail/RPCHelpers.h>
 #include <xrpld/rpc/detail/Tuning.h>
 #include <xrpld/rpc/json_body.h>
+
 #include <xrpl/basics/Log.h>
 #include <xrpl/basics/base64.h>
 #include <xrpl/basics/contract.h>
@@ -44,9 +43,11 @@
 #include <xrpl/server/Server.h>
 #include <xrpl/server/SimpleWriter.h>
 #include <xrpl/server/detail/JSONRPCUtil.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/beast/http/fields.hpp>
 #include <boost/beast/http/string_body.hpp>
+
 #include <algorithm>
 #include <stdexcept>
 
@@ -103,7 +104,7 @@ authorized(Port const& port, std::map<std::string, std::string> const& h)
 ServerHandler::ServerHandler(
     ServerHandlerCreator const&,
     Application& app,
-    boost::asio::io_service& io_service,
+    boost::asio::io_context& io_context,
     JobQueue& jobQueue,
     NetworkOPs& networkOPs,
     Resource::Manager& resourceManager,
@@ -112,7 +113,7 @@ ServerHandler::ServerHandler(
     , m_resourceManager(resourceManager)
     , m_journal(app_.journal("Server"))
     , m_networkOPs(networkOPs)
-    , m_server(make_Server(*this, io_service, app_.journal("Server")))
+    , m_server(make_Server(*this, io_context, app_.journal("Server")))
     , m_jobQueue(jobQueue)
 {
     auto const& group(cm.group("rpc"));
@@ -130,7 +131,26 @@ void
 ServerHandler::setup(Setup const& setup, beast::Journal journal)
 {
     setup_ = setup;
-    m_server->ports(setup.ports);
+    endpoints_ = m_server->ports(setup.ports);
+
+    // fix auto ports
+    for (auto& port : setup_.ports)
+    {
+        if (auto it = endpoints_.find(port.name); it != endpoints_.end())
+        {
+            auto const endpointPort = it->second.port();
+            if (!port.port)
+                port.port = endpointPort;
+
+            if (!setup_.client.port &&
+                (port.protocol.count("http") > 0 ||
+                 port.protocol.count("https") > 0))
+                setup_.client.port = endpointPort;
+
+            if (!setup_.overlay.port() && (port.protocol.count("peer") > 0))
+                setup_.overlay.port(endpointPort);
+        }
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -262,14 +282,13 @@ template <class ConstBufferSequence>
 static std::string
 buffers_to_string(ConstBufferSequence const& bs)
 {
-    using boost::asio::buffer_cast;
     using boost::asio::buffer_size;
     std::string s;
     s.reserve(buffer_size(bs));
     // Use auto&& so the right thing happens whether bs returns a copy or
     // a reference
     for (auto&& b : bs)
-        s.append(buffer_cast<char const*>(b), buffer_size(b));
+        s.append(static_cast<char const*>(b.data()), buffer_size(b));
     return s;
 }
 
@@ -444,7 +463,7 @@ ServerHandler::processSession(
             if (jv.isMember(jss::api_version))
                 jr[jss::api_version] = jv[jss::api_version];
 
-            is->getConsumer().charge(Resource::feeInvalidRPC);
+            is->getConsumer().charge(Resource::feeMalformedRPC);
             return jr;
         }
 
@@ -461,7 +480,7 @@ ServerHandler::processSession(
             is->user());
         if (Role::FORBID == role)
         {
-            loadType = Resource::feeInvalidRPC;
+            loadType = Resource::feeMalformedRPC;
             jr[jss::result] = rpcError(rpcFORBIDDEN);
         }
         else
@@ -729,7 +748,7 @@ ServerHandler::processRequest(
 
         if (role == Role::FORBID)
         {
-            usage.charge(Resource::feeInvalidRPC);
+            usage.charge(Resource::feeMalformedRPC);
             if (!batch)
             {
                 HTTPReply(403, "Forbidden", output, rpcJ);
@@ -743,7 +762,7 @@ ServerHandler::processRequest(
 
         if (!jsonRPC.isMember(jss::method) || jsonRPC[jss::method].isNull())
         {
-            usage.charge(Resource::feeInvalidRPC);
+            usage.charge(Resource::feeMalformedRPC);
             if (!batch)
             {
                 HTTPReply(400, "Null method", output, rpcJ);
@@ -758,7 +777,7 @@ ServerHandler::processRequest(
         Json::Value const& method = jsonRPC[jss::method];
         if (!method.isString())
         {
-            usage.charge(Resource::feeInvalidRPC);
+            usage.charge(Resource::feeMalformedRPC);
             if (!batch)
             {
                 HTTPReply(400, "method is not string", output, rpcJ);
@@ -774,7 +793,7 @@ ServerHandler::processRequest(
         std::string strMethod = method.asString();
         if (strMethod.empty())
         {
-            usage.charge(Resource::feeInvalidRPC);
+            usage.charge(Resource::feeMalformedRPC);
             if (!batch)
             {
                 HTTPReply(400, "method is empty", output, rpcJ);
@@ -802,7 +821,7 @@ ServerHandler::processRequest(
 
             else if (!params.isArray() || params.size() != 1)
             {
-                usage.charge(Resource::feeInvalidRPC);
+                usage.charge(Resource::feeMalformedRPC);
                 HTTPReply(400, "params unparseable", output, rpcJ);
                 return;
             }
@@ -811,7 +830,7 @@ ServerHandler::processRequest(
                 params = std::move(params[0u]);
                 if (!params.isObjectOrNull())
                 {
-                    usage.charge(Resource::feeInvalidRPC);
+                    usage.charge(Resource::feeMalformedRPC);
                     HTTPReply(400, "params unparseable", output, rpcJ);
                     return;
                 }
@@ -827,7 +846,7 @@ ServerHandler::processRequest(
         {
             if (!params[jss::ripplerpc].isString())
             {
-                usage.charge(Resource::feeInvalidRPC);
+                usage.charge(Resource::feeMalformedRPC);
                 if (!batch)
                 {
                     HTTPReply(400, "ripplerpc is not a string", output, rpcJ);
@@ -1007,7 +1026,7 @@ ServerHandler::processRequest(
 
     if (auto stream = m_journal.debug())
     {
-        static const int maxSize = 10000;
+        static int const maxSize = 10000;
         if (response.size() <= maxSize)
             stream << "Reply: " << response;
         else
@@ -1094,11 +1113,6 @@ to_Port(ParsedPort const& parsed, std::ostream& log)
         log << "Missing 'port' in [" << p.name << "]";
         Throw<std::exception>();
     }
-    else if (*parsed.port == 0)
-    {
-        log << "Port " << *parsed.port << "in [" << p.name << "] is invalid";
-        Throw<std::exception>();
-    }
     p.port = *parsed.port;
 
     if (parsed.protocol.empty())
@@ -1157,7 +1171,6 @@ parse_Ports(Config const& config, std::ostream& log)
             continue;
 
         ParsedPort parsed = common;
-        parsed.name = name;
         parse_Port(parsed, config[name], log);
         result.push_back(to_Port(parsed, log));
     }
@@ -1232,11 +1245,10 @@ setup_Overlay(ServerHandler::Setup& setup)
         });
     if (iter == setup.ports.cend())
     {
-        setup.overlay.port = 0;
+        setup.overlay = {};
         return;
     }
-    setup.overlay.ip = iter->ip;
-    setup.overlay.port = iter->port;
+    setup.overlay = {iter->ip, iter->port};
 }
 
 ServerHandler::Setup
@@ -1254,7 +1266,7 @@ setup_ServerHandler(Config const& config, std::ostream&& log)
 std::unique_ptr<ServerHandler>
 make_ServerHandler(
     Application& app,
-    boost::asio::io_service& io_service,
+    boost::asio::io_context& io_context,
     JobQueue& jobQueue,
     NetworkOPs& networkOPs,
     Resource::Manager& resourceManager,
@@ -1263,7 +1275,7 @@ make_ServerHandler(
     return std::make_unique<ServerHandler>(
         ServerHandler::ServerHandlerCreator(),
         app,
-        io_service,
+        io_context,
         jobQueue,
         networkOPs,
         resourceManager,

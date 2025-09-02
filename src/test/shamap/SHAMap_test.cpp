@@ -19,7 +19,9 @@
 
 #include <test/shamap/common.h>
 #include <test/unit_test/SuiteJournal.h>
+
 #include <xrpld/shamap/SHAMap.h>
+
 #include <xrpl/basics/Blob.h>
 #include <xrpl/basics/Buffer.h>
 #include <xrpl/beast/unit_test.h>
@@ -400,7 +402,7 @@ class SHAMapPathProof_test : public beast::unit_test::suite
     }
 };
 
-BEAST_DEFINE_TESTSUITE(SHAMap, ripple_app, ripple);
-BEAST_DEFINE_TESTSUITE(SHAMapPathProof, ripple_app, ripple);
+BEAST_DEFINE_TESTSUITE(SHAMap, shamap, ripple);
+BEAST_DEFINE_TESTSUITE(SHAMapPathProof, shamap, ripple);
 }  // namespace tests
 }  // namespace ripple

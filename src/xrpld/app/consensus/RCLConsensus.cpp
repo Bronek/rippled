@@ -37,13 +37,16 @@
 #include <xrpld/consensus/LedgerTiming.h>
 #include <xrpld/overlay/Overlay.h>
 #include <xrpld/overlay/predicates.h>
+
 #include <xrpl/basics/random.h>
 #include <xrpl/beast/core/LexicalCast.h>
+#include <xrpl/beast/utility/instrumentation.h>
 #include <xrpl/protocol/BuildInfo.h>
 #include <xrpl/protocol/Feature.h>
 #include <xrpl/protocol/digest.h>
 
 #include <algorithm>
+#include <iomanip>
 #include <mutex>
 
 namespace ripple {
@@ -92,7 +95,8 @@ RCLConsensus::Adaptor::Adaptor(
               std::numeric_limits<std::uint64_t>::max() - 1))
     , nUnlVote_(validatorKeys_.nodeID, j_)
 {
-    assert(valCookie_ != 0);
+    XRPL_ASSERT(
+        valCookie_, "ripple::RCLConsensus::Adaptor::Adaptor : nonzero cookie");
 
     JLOG(j_.info()) << "Consensus engine started (cookie: " +
             std::to_string(valCookie_) + ")";
@@ -146,8 +150,12 @@ RCLConsensus::Adaptor::acquireLedger(LedgerHash const& hash)
         return std::nullopt;
     }
 
-    assert(!built->open() && built->isImmutable());
-    assert(built->info().hash == hash);
+    XRPL_ASSERT(
+        !built->open() && built->isImmutable(),
+        "ripple::RCLConsensus::Adaptor::acquireLedger : valid ledger state");
+    XRPL_ASSERT(
+        built->info().hash == hash,
+        "ripple::RCLConsensus::Adaptor::acquireLedger : ledger hash match");
 
     // Notify inbound transactions of the new ledger sequence number
     inboundTransactions_.newRound(built->info().seq);
@@ -311,8 +319,8 @@ RCLConsensus::Adaptor::onClose(
     NetClock::time_point const& closeTime,
     ConsensusMode mode) -> Result
 {
-    const bool wrongLCL = mode == ConsensusMode::wrongLedger;
-    const bool proposing = mode == ConsensusMode::proposing;
+    bool const wrongLCL = mode == ConsensusMode::wrongLedger;
+    bool const proposing = mode == ConsensusMode::proposing;
 
     notify(protocol::neCLOSING_LEDGER, ledger, !wrongLCL);
 
@@ -354,7 +362,7 @@ RCLConsensus::Adaptor::onClose(
             {
                 feeVote_->doVoting(prevLedger, validations, initialSet);
                 app_.getAmendmentTable().doVoting(
-                    prevLedger, validations, initialSet);
+                    prevLedger, validations, initialSet, j_);
             }
         }
         else if (
@@ -428,7 +436,8 @@ RCLConsensus::Adaptor::onAccept(
     NetClock::duration const& closeResolution,
     ConsensusCloseTimes const& rawCloseTimes,
     ConsensusMode const& mode,
-    Json::Value&& consensusJson)
+    Json::Value&& consensusJson,
+    bool const validating)
 {
     app_.getJobQueue().addJob(
         jtACCEPT,
@@ -439,6 +448,7 @@ RCLConsensus::Adaptor::onAccept(
             // is accepted, the consensus results and capture by reference state
             // will not change until startRound is called (which happens via
             // endConsensus).
+            RclConsensusLogger clog("onAccept", validating, j_);
             this->doAccept(
                 result,
                 prevLedger,
@@ -446,7 +456,7 @@ RCLConsensus::Adaptor::onAccept(
                 rawCloseTimes,
                 mode,
                 std::move(cj));
-            this->app_.getOPs().endConsensus();
+            this->app_.getOPs().endConsensus(clog.ss());
         });
 }
 
@@ -464,9 +474,9 @@ RCLConsensus::Adaptor::doAccept(
 
     bool closeTimeCorrect;
 
-    const bool proposing = mode == ConsensusMode::proposing;
-    const bool haveCorrectLCL = mode != ConsensusMode::wrongLedger;
-    const bool consensusFail = result.state == ConsensusState::MovedOn;
+    bool const proposing = mode == ConsensusMode::proposing;
+    bool const haveCorrectLCL = mode != ConsensusMode::wrongLedger;
+    bool const consensusFail = result.state == ConsensusState::MovedOn;
 
     auto consensusCloseTime = result.position.closeTime();
 
@@ -673,8 +683,12 @@ RCLConsensus::Adaptor::doAccept(
         ledgerMaster_.switchLCL(built.ledger_);
 
         // Do these need to exist?
-        assert(ledgerMaster_.getClosedLedger()->info().hash == built.id());
-        assert(app_.openLedger().current()->info().parentHash == built.id());
+        XRPL_ASSERT(
+            ledgerMaster_.getClosedLedger()->info().hash == built.id(),
+            "ripple::RCLConsensus::Adaptor::doAccept : ledger hash match");
+        XRPL_ASSERT(
+            app_.openLedger().current()->info().parentHash == built.id(),
+            "ripple::RCLConsensus::Adaptor::doAccept : parent hash match");
     }
 
     //-------------------------------------------------------------------------
@@ -770,7 +784,9 @@ RCLConsensus::Adaptor::buildLCL(
     std::shared_ptr<Ledger> built = [&]() {
         if (auto const replayData = ledgerMaster_.releaseReplay())
         {
-            assert(replayData->parent()->info().hash == previousLedger.id());
+            XRPL_ASSERT(
+                replayData->parent()->info().hash == previousLedger.id(),
+                "ripple::RCLConsensus::Adaptor::buildLCL : parent hash match");
             return buildLedger(*replayData, tapNONE, app_, j_);
         }
         return buildLedger(
@@ -923,17 +939,22 @@ RCLConsensus::getJson(bool full) const
 }
 
 void
-RCLConsensus::timerEntry(NetClock::time_point const& now)
+RCLConsensus::timerEntry(
+    NetClock::time_point const& now,
+    std::unique_ptr<std::stringstream> const& clog)
 {
     try
     {
         std::lock_guard _{mutex_};
-        consensus_.timerEntry(now);
+        consensus_.timerEntry(now, clog);
     }
     catch (SHAMapMissingNode const& mn)
     {
         // This should never happen
-        JLOG(j_.error()) << "During consensus timerEntry: " << mn.what();
+        std::stringstream ss;
+        ss << "During consensus timerEntry: " << mn.what();
+        JLOG(j_.error()) << ss.str();
+        CLOG(clog) << ss.str();
         Rethrow();
     }
 }
@@ -999,7 +1020,7 @@ RCLConsensus::Adaptor::preStartRound(
         }
     }
 
-    const bool synced = app_.getOPs().getOperatingMode() == OperatingMode::FULL;
+    bool const synced = app_.getOPs().getOperatingMode() == OperatingMode::FULL;
 
     if (validating_)
     {
@@ -1070,7 +1091,8 @@ RCLConsensus::startRound(
     RCLCxLedger::ID const& prevLgrId,
     RCLCxLedger const& prevLgr,
     hash_set<NodeID> const& nowUntrusted,
-    hash_set<NodeID> const& nowTrusted)
+    hash_set<NodeID> const& nowTrusted,
+    std::unique_ptr<std::stringstream> const& clog)
 {
     std::lock_guard _{mutex_};
     consensus_.startRound(
@@ -1078,6 +1100,36 @@ RCLConsensus::startRound(
         prevLgrId,
         prevLgr,
         nowUntrusted,
-        adaptor_.preStartRound(prevLgr, nowTrusted));
+        adaptor_.preStartRound(prevLgr, nowTrusted),
+        clog);
 }
+
+RclConsensusLogger::RclConsensusLogger(
+    char const* label,
+    bool const validating,
+    beast::Journal j)
+    : j_(j)
+{
+    if (!validating && !j.info())
+        return;
+    start_ = std::chrono::steady_clock::now();
+    ss_ = std::make_unique<std::stringstream>();
+    header_ = "ConsensusLogger ";
+    header_ += label;
+    header_ += ": ";
+}
+
+RclConsensusLogger::~RclConsensusLogger()
+{
+    if (!ss_)
+        return;
+    auto const duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - start_);
+    std::stringstream outSs;
+    outSs << header_ << "duration " << (duration.count() / 1000) << '.'
+          << std::setw(3) << std::setfill('0') << (duration.count() % 1000)
+          << "s. " << ss_->str();
+    j_.sink().writeAlways(beast::severities::kInfo, outSs.str());
+}
+
 }  // namespace ripple

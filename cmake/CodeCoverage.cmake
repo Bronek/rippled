@@ -98,6 +98,12 @@
 # 2024-04-03, Bronek Kozicki
 #     - add support for output formats: jacoco, clover, lcov
 #
+# 2025-05-12, Jingchen Wu
+#     - add -fprofile-update=atomic to ensure atomic profile generation
+#
+# 2025-08-28, Bronek Kozicki
+#     - fix "At least one COMMAND must be given" CMake warning from policy CMP0175
+#
 # USAGE:
 #
 # 1. Copy this file into your cmake modules path.
@@ -200,14 +206,26 @@ set(COVERAGE_COMPILER_FLAGS "-g --coverage"
     CACHE INTERNAL "")
 if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
     include(CheckCXXCompilerFlag)
+    include(CheckCCompilerFlag)
+
     check_cxx_compiler_flag(-fprofile-abs-path HAVE_cxx_fprofile_abs_path)
     if(HAVE_cxx_fprofile_abs_path)
         set(COVERAGE_CXX_COMPILER_FLAGS "${COVERAGE_COMPILER_FLAGS} -fprofile-abs-path")
     endif()
-    include(CheckCCompilerFlag)
+
     check_c_compiler_flag(-fprofile-abs-path HAVE_c_fprofile_abs_path)
     if(HAVE_c_fprofile_abs_path)
         set(COVERAGE_C_COMPILER_FLAGS "${COVERAGE_COMPILER_FLAGS} -fprofile-abs-path")
+    endif()
+
+    check_cxx_compiler_flag(-fprofile-update HAVE_cxx_fprofile_update)
+    if(HAVE_cxx_fprofile_update)
+        set(COVERAGE_CXX_COMPILER_FLAGS "${COVERAGE_COMPILER_FLAGS}  -fprofile-update=atomic")
+    endif()
+
+    check_c_compiler_flag(-fprofile-update HAVE_c_fprofile_update)
+    if(HAVE_c_fprofile_update)
+        set(COVERAGE_C_COMPILER_FLAGS "${COVERAGE_COMPILER_FLAGS} -fprofile-update=atomic")
     endif()
 endif()
 
@@ -431,7 +449,7 @@ function(setup_target_for_coverage_gcovr)
 
     # Show info where to find the report
     add_custom_command(TARGET ${Coverage_NAME} POST_BUILD
-        COMMAND ;
+        COMMAND echo
         COMMENT "Code coverage report saved in ${GCOVR_OUTPUT_FILE} formatted as ${Coverage_FORMAT}"
     )
 endfunction() # setup_target_for_coverage_gcovr

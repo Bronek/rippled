@@ -17,10 +17,14 @@
 */
 //==============================================================================
 
+#include <xrpl/beast/utility/instrumentation.h>
+#include <xrpl/json/json_value.h>
 #include <xrpl/protocol/ErrorCodes.h>
+#include <xrpl/protocol/jss.h>
+
 #include <array>
-#include <cassert>
 #include <stdexcept>
+#include <string>
 
 namespace ripple {
 namespace RPC {
@@ -92,6 +96,7 @@ constexpr static ErrorInfo unorderedErrorInfos[]{
     {rpcNOT_SYNCED,             "notSynced",            "Not synced to the network.", 503},
     {rpcNO_EVENTS,              "noEvents",             "Current transport does not support events.", 405},
     {rpcNO_NETWORK,             "noNetwork",            "Not synced to the network.", 503},
+    {rpcWRONG_NETWORK,          "wrongNetwork",         "Wrong network.", 503},
     {rpcNO_PERMISSION,          "noPermission",         "You don't have permission for this command.", 401},
     {rpcNO_PF_REQUEST,          "noPathRequest",        "No pathfinding request in progress.", 404},
     {rpcOBJECT_NOT_FOUND,       "objectNotFound",       "The requested object was not found.", 404},
@@ -102,13 +107,20 @@ constexpr static ErrorInfo unorderedErrorInfos[]{
     {rpcSRC_ACT_MALFORMED,      "srcActMalformed",      "Source account is malformed.", 400},
     {rpcSRC_ACT_MISSING,        "srcActMissing",        "Source account not provided.", 400},
     {rpcSRC_ACT_NOT_FOUND,      "srcActNotFound",       "Source account not found.", 404},
+    {rpcDELEGATE_ACT_NOT_FOUND, "delegateActNotFound",  "Delegate account not found.", 404},
     {rpcSRC_CUR_MALFORMED,      "srcCurMalformed",      "Source currency is malformed.", 400},
     {rpcSRC_ISR_MALFORMED,      "srcIsrMalformed",      "Source issuer is malformed.", 400},
     {rpcSTREAM_MALFORMED,       "malformedStream",      "Stream malformed.", 400},
     {rpcTOO_BUSY,               "tooBusy",              "The server is too busy to help you now.", 503},
     {rpcTXN_NOT_FOUND,          "txnNotFound",          "Transaction not found.", 404},
     {rpcUNKNOWN_COMMAND,        "unknownCmd",           "Unknown method.", 405},
-    {rpcORACLE_MALFORMED,       "oracleMalformed",      "Oracle request is malformed.", 400}};
+    {rpcORACLE_MALFORMED,       "oracleMalformed",      "Oracle request is malformed.", 400},
+    {rpcBAD_CREDENTIALS,        "badCredentials",       "Credentials do not exist, are not accepted, or have expired.", 400},
+    {rpcTX_SIGNED,              "transactionSigned",    "Transaction should not be signed.", 400},
+    {rpcDOMAIN_MALFORMED,       "domainMalformed",      "Domain is malformed.", 400},
+    {rpcENTRY_NOT_FOUND,        "entryNotFound",        "Entry not found.", 400},
+    {rpcUNEXPECTED_LEDGER_TYPE, "unexpectedLedgerType", "Unexpected ledger type.", 400},
+};
 // clang-format on
 
 // Sort and validate unorderedErrorInfos at compile time.  Should be
@@ -210,7 +222,9 @@ error_code_http_status(error_code_i code)
 std::string
 rpcErrorString(Json::Value const& jv)
 {
-    assert(RPC::contains_error(jv));
+    XRPL_ASSERT(
+        RPC::contains_error(jv),
+        "ripple::RPC::rpcErrorString : input contains an error");
     return jv[jss::error].asString() + jv[jss::error_message].asString();
 }
 

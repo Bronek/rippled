@@ -53,6 +53,12 @@ public:
             if (level >= threshold())
                 ++m_count;
         }
+
+        void
+        writeAlways(severities::Severity level, std::string const&) override
+        {
+            ++m_count;
+        }
     };
 
     void
@@ -97,6 +103,6 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(Journal, utility, beast);
+BEAST_DEFINE_TESTSUITE(Journal, beast, beast);
 
 }  // namespace beast

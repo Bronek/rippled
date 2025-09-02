@@ -19,6 +19,7 @@
 
 #include <test/jtx.h>
 #include <test/jtx/WSClient.h>
+
 #include <xrpl/beast/unit_test.h>
 
 namespace ripple {
@@ -45,7 +46,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(WSClient, test, ripple);
+BEAST_DEFINE_TESTSUITE(WSClient, jtx, ripple);
 
 }  // namespace test
 }  // namespace ripple

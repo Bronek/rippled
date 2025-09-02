@@ -18,8 +18,14 @@
 //==============================================================================
 
 #include <xrpl/protocol/TER.h>
+
 #include <boost/range/adaptor/transformed.hpp>
-#include <type_traits>
+#include <boost/range/iterator_range_core.hpp>
+
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <utility>
 
 namespace ripple {
 
@@ -115,6 +121,13 @@ transResults()
         MAKE_ERROR(tecTOKEN_PAIR_NOT_FOUND,          "Token pair is not found in Oracle object."),
         MAKE_ERROR(tecARRAY_EMPTY,                   "Array is empty."),
         MAKE_ERROR(tecARRAY_TOO_LARGE,               "Array is too large."),
+        MAKE_ERROR(tecLOCKED,                        "Fund is locked."),
+        MAKE_ERROR(tecBAD_CREDENTIALS,               "Bad credentials."),
+        MAKE_ERROR(tecWRONG_ASSET,                   "Wrong asset given."),
+        MAKE_ERROR(tecLIMIT_EXCEEDED,                "Limit exceeded."),
+        MAKE_ERROR(tecPSEUDO_ACCOUNT,                "This operation is not allowed against a pseudo-account."),
+        MAKE_ERROR(tecPRECISION_LOSS,                "The amounts used by the transaction cannot interact."),
+        MAKE_ERROR(tecNO_DELEGATE_PERMISSION,        "Delegated account lacks permission to perform this transaction."),
 
         MAKE_ERROR(tefALREADY,                     "The exact transaction was already in this ledger."),
         MAKE_ERROR(tefBAD_ADD_AUTH,                "Not authorized to add account."),
@@ -159,7 +172,7 @@ transResults()
 
         MAKE_ERROR(temMALFORMED,                 "Malformed transaction."),
         MAKE_ERROR(temBAD_AMM_TOKENS,            "Malformed: Invalid LPTokens."),
-        MAKE_ERROR(temBAD_AMOUNT,                "Can only send positive amounts."),
+        MAKE_ERROR(temBAD_AMOUNT,                "Malformed: Bad amount."),
         MAKE_ERROR(temBAD_CURRENCY,              "Malformed: Bad currency."),
         MAKE_ERROR(temBAD_EXPIRATION,            "Malformed: Bad expiration."),
         MAKE_ERROR(temBAD_FEE,                   "Invalid fee, negative or not XRP."),
@@ -205,6 +218,8 @@ transResults()
         MAKE_ERROR(temXCHAIN_BRIDGE_BAD_REWARD_AMOUNT, "Malformed: Bad reward amount."),
         MAKE_ERROR(temARRAY_EMPTY,               "Malformed: Array is empty."),
         MAKE_ERROR(temARRAY_TOO_LARGE,           "Malformed: Array is too large."),
+        MAKE_ERROR(temBAD_TRANSFER_FEE,          "Malformed: Transfer fee is outside valid range."),
+        MAKE_ERROR(temINVALID_INNER_BATCH,       "Malformed: Invalid inner batch transaction."),
 
         MAKE_ERROR(terRETRY,                  "Retry transaction."),
         MAKE_ERROR(terFUNDS_SPENT,            "DEPRECATED."),
@@ -219,6 +234,7 @@ transResults()
         MAKE_ERROR(terQUEUED,                 "Held until escalated fee drops."),
         MAKE_ERROR(terPRE_TICKET,             "Ticket is not yet in ledger."),
         MAKE_ERROR(terNO_AMM,                 "AMM doesn't exist for the asset pair."),
+        MAKE_ERROR(terADDRESS_COLLISION,      "Failed to allocate an unique account address."),
 
         MAKE_ERROR(tesSUCCESS,                "The transaction was applied. Only final in a validated ledger."),
     };

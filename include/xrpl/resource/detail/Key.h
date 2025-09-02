@@ -21,8 +21,8 @@
 #define RIPPLE_RESOURCE_KEY_H_INCLUDED
 
 #include <xrpl/beast/net/IPEndpoint.h>
+#include <xrpl/beast/utility/instrumentation.h>
 #include <xrpl/resource/detail/Kind.h>
-#include <cassert>
 
 namespace ripple {
 namespace Resource {
@@ -53,7 +53,7 @@ struct Key
 
     struct key_equal
     {
-        explicit key_equal() = default;
+        key_equal() = default;
 
         bool
         operator()(Key const& lhs, Key const& rhs) const

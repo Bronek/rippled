@@ -21,10 +21,14 @@
 #define RIPPLE_APP_MISC_DETAIL_WORKFILE_H_INCLUDED
 
 #include <xrpld/app/misc/detail/Work.h>
+
 #include <xrpl/basics/ByteUtilities.h>
 #include <xrpl/basics/FileUtilities.h>
-#include <cassert>
-#include <cerrno>
+#include <xrpl/beast/utility/instrumentation.h>
+
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/strand.hpp>
 
 namespace ripple {
 
@@ -45,7 +49,7 @@ public:
 public:
     WorkFile(
         std::string const& path,
-        boost::asio::io_service& ios,
+        boost::asio::io_context& ios,
         callback_type cb);
     ~WorkFile();
 
@@ -58,17 +62,20 @@ public:
 private:
     std::string path_;
     callback_type cb_;
-    boost::asio::io_service& ios_;
-    boost::asio::io_service::strand strand_;
+    boost::asio::io_context& ios_;
+    boost::asio::strand<boost::asio::io_context::executor_type> strand_;
 };
 
 //------------------------------------------------------------------------------
 
 WorkFile::WorkFile(
     std::string const& path,
-    boost::asio::io_service& ios,
+    boost::asio::io_context& ios,
     callback_type cb)
-    : path_(path), cb_(std::move(cb)), ios_(ios), strand_(ios)
+    : path_(path)
+    , cb_(std::move(cb))
+    , ios_(ios)
+    , strand_(boost::asio::make_strand(ios))
 {
 }
 
@@ -82,13 +89,15 @@ void
 WorkFile::run()
 {
     if (!strand_.running_in_this_thread())
-        return ios_.post(
-            strand_.wrap(std::bind(&WorkFile::run, shared_from_this())));
+        return boost::asio::post(
+            ios_,
+            boost::asio::bind_executor(
+                strand_, std::bind(&WorkFile::run, shared_from_this())));
 
     error_code ec;
     auto const fileContents = getFileContents(ec, path_, megabytes(1));
 
-    assert(cb_);
+    XRPL_ASSERT(cb_, "ripple::detail::WorkFile::run : callback is set");
     cb_(ec, fileContents);
     cb_ = nullptr;
 }

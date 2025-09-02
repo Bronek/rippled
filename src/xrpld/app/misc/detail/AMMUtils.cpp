@@ -16,11 +16,13 @@
     OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 //==============================================================================
+
+#include <xrpld/app/misc/AMMHelpers.h>
 #include <xrpld/app/misc/AMMUtils.h>
 #include <xrpld/ledger/Sandbox.h>
+
 #include <xrpl/basics/Log.h>
 #include <xrpl/protocol/AMMCore.h>
-#include <xrpl/protocol/STAccount.h>
 #include <xrpl/protocol/STObject.h>
 
 namespace ripple {
@@ -51,8 +53,8 @@ ammHolds(
     beast::Journal const j)
 {
     auto const issues = [&]() -> std::optional<std::pair<Issue, Issue>> {
-        auto const issue1 = ammSle[sfAsset];
-        auto const issue2 = ammSle[sfAsset2];
+        auto const issue1 = ammSle[sfAsset].get<Issue>();
+        auto const issue2 = ammSle[sfAsset2].get<Issue>();
         if (optIssue1 && optIssue2)
         {
             if (invalidAMMAssetPair(
@@ -72,7 +74,7 @@ ammHolds(
         auto const singleIssue =
             [&issue1, &issue2, &j](
                 Issue checkIssue,
-                const char* label) -> std::optional<std::pair<Issue, Issue>> {
+                char const* label) -> std::optional<std::pair<Issue, Issue>> {
             if (checkIssue == issue1)
                 return std::make_optional(std::make_pair(issue1, issue2));
             else if (checkIssue == issue2)
@@ -116,13 +118,45 @@ ammLPHolds(
     AccountID const& lpAccount,
     beast::Journal const j)
 {
-    return accountHolds(
-        view,
-        lpAccount,
-        ammLPTCurrency(cur1, cur2),
-        ammAccount,
-        FreezeHandling::fhZERO_IF_FROZEN,
-        j);
+    // This function looks similar to `accountHolds`. However, it only checks if
+    // a LPToken holder has enough balance. On the other hand, `accountHolds`
+    // checks if the underlying assets of LPToken are frozen with the
+    // fixFrozenLPTokenTransfer amendment
+
+    auto const currency = ammLPTCurrency(cur1, cur2);
+    STAmount amount;
+
+    auto const sle = view.read(keylet::line(lpAccount, ammAccount, currency));
+    if (!sle)
+    {
+        amount.clear(Issue{currency, ammAccount});
+        JLOG(j.trace()) << "ammLPHolds: no SLE "
+                        << " lpAccount=" << to_string(lpAccount)
+                        << " amount=" << amount.getFullText();
+    }
+    else if (isFrozen(view, lpAccount, currency, ammAccount))
+    {
+        amount.clear(Issue{currency, ammAccount});
+        JLOG(j.trace()) << "ammLPHolds: frozen currency "
+                        << " lpAccount=" << to_string(lpAccount)
+                        << " amount=" << amount.getFullText();
+    }
+    else
+    {
+        amount = sle->getFieldAmount(sfBalance);
+        if (lpAccount > ammAccount)
+        {
+            // Put balance in account terms.
+            amount.negate();
+        }
+        amount.setIssuer(ammAccount);
+
+        JLOG(j.trace()) << "ammLPHolds:"
+                        << " lpAccount=" << to_string(lpAccount)
+                        << " amount=" << amount.getFullText();
+    }
+
+    return view.balanceHook(lpAccount, ammAccount, amount);
 }
 
 STAmount
@@ -134,8 +168,8 @@ ammLPHolds(
 {
     return ammLPHolds(
         view,
-        ammSle[sfAsset].currency,
-        ammSle[sfAsset2].currency,
+        ammSle[sfAsset].get<Issue>().currency,
+        ammSle[sfAsset2].get<Issue>().currency,
         ammSle[sfAccount],
         lpAccount,
         j);
@@ -145,9 +179,10 @@ std::uint16_t
 getTradingFee(ReadView const& view, SLE const& ammSle, AccountID const& account)
 {
     using namespace std::chrono;
-    assert(
+    XRPL_ASSERT(
         !view.rules().enabled(fixInnerObjTemplate) ||
-        ammSle.isFieldPresent(sfAuctionSlot));
+            ammSle.isFieldPresent(sfAuctionSlot),
+        "ripple::getTradingFee : auction present");
     if (ammSle.isFieldPresent(sfAuctionSlot))
     {
         auto const& auctionSlot =
@@ -428,6 +463,34 @@ isOnlyLiquidityProvider(
         currentIndex = keylet::page(root, uNodeNext);
     }
     return Unexpected<TER>(tecINTERNAL);  // LCOV_EXCL_LINE
+}
+
+Expected<bool, TER>
+verifyAndAdjustLPTokenBalance(
+    Sandbox& sb,
+    STAmount const& lpTokens,
+    std::shared_ptr<SLE>& ammSle,
+    AccountID const& account)
+{
+    if (auto const res = isOnlyLiquidityProvider(sb, lpTokens.issue(), account);
+        !res)
+        return Unexpected<TER>(res.error());
+    else if (res.value())
+    {
+        if (withinRelativeDistance(
+                lpTokens,
+                ammSle->getFieldAmount(sfLPTokenBalance),
+                Number{1, -3}))
+        {
+            ammSle->setFieldAmount(sfLPTokenBalance, lpTokens);
+            sb.update(ammSle);
+        }
+        else
+        {
+            return Unexpected<TER>(tecAMM_INVALID_TOKENS);
+        }
+    }
+    return true;
 }
 
 }  // namespace ripple

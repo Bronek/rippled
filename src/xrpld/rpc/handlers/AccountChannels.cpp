@@ -17,18 +17,18 @@
 */
 //==============================================================================
 
-#include <xrpld/app/main/Application.h>
 #include <xrpld/ledger/ReadView.h>
 #include <xrpld/ledger/View.h>
 #include <xrpld/rpc/Context.h>
 #include <xrpld/rpc/detail/RPCHelpers.h>
 #include <xrpld/rpc/detail/Tuning.h>
+
 #include <xrpl/protocol/ErrorCodes.h>
 #include <xrpl/protocol/PublicKey.h>
 #include <xrpl/protocol/RPCErr.h>
-#include <xrpl/protocol/STAccount.h>
 #include <xrpl/protocol/jss.h>
 #include <xrpl/resource/Fees.h>
+
 namespace ripple {
 
 void
@@ -169,7 +169,7 @@ doAccountChannels(RPC::JsonContext& context)
                 std::shared_ptr<SLE const> const& sleCur) {
                 if (!sleCur)
                 {
-                    assert(false);
+                    UNREACHABLE("ripple::doAccountChannels : null SLE");
                     return false;
                 }
 

@@ -18,9 +18,7 @@
 //==============================================================================
 
 #include <xrpld/app/ledger/detail/TimeoutCounter.h>
-#include <xrpld/app/main/Application.h>
 #include <xrpld/core/JobQueue.h>
-#include <xrpld/overlay/Overlay.h>
 
 namespace ripple {
 
@@ -41,9 +39,11 @@ TimeoutCounter::TimeoutCounter(
     , progress_(false)
     , timerInterval_(interval)
     , queueJobParameter_(std::move(jobParameter))
-    , timer_(app_.getIOService())
+    , timer_(app_.getIOContext())
 {
-    assert((timerInterval_ > 10ms) && (timerInterval_ < 30s));
+    XRPL_ASSERT(
+        (timerInterval_ > 10ms) && (timerInterval_ < 30s),
+        "ripple::TimeoutCounter::TimeoutCounter : interval input inside range");
 }
 
 void
@@ -100,8 +100,8 @@ TimeoutCounter::invokeOnTimer()
     if (!progress_)
     {
         ++timeouts_;
-        JLOG(journal_.debug())
-            << "Timeout(" << timeouts_ << ") " << " acquiring " << hash_;
+        JLOG(journal_.debug()) << "Timeout(" << timeouts_ << ") "
+                               << " acquiring " << hash_;
         onTimer(false, sl);
     }
     else

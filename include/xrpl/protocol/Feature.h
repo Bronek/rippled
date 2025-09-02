@@ -21,8 +21,9 @@
 #define RIPPLE_PROTOCOL_FEATURE_H_INCLUDED
 
 #include <xrpl/basics/base_uint.h>
+
 #include <boost/container/flat_map.hpp>
-#include <array>
+
 #include <bitset>
 #include <map>
 #include <optional>
@@ -33,35 +34,51 @@
  *
  * Steps required to add new features to the code:
  *
- * 1) In this file, increment `numFeatures` and add a uint256 declaration
- *    for the feature at the bottom
- * 2) Add a uint256 definition for the feature to the corresponding source
- *    file (Feature.cpp). Use `registerFeature` to create the feature with
- *    the feature's name, `Supported::no`, and `VoteBehavior::DefaultNo`. This
- *    should be the only place the feature's name appears in code as a string.
- * 3) Use the uint256 as the parameter to `view.rules.enabled()` to
- *    control flow into new code that this feature limits.
- * 4) If the feature development is COMPLETE, and the feature is ready to be
- *    SUPPORTED, change the `registerFeature` parameter to Supported::yes.
- * 5) When the feature is ready to be ENABLED, change the `registerFeature`
- *    parameter to `VoteBehavior::DefaultYes`.
- * In general, any newly supported amendments (`Supported::yes`) should have
- * a `VoteBehavior::DefaultNo` for at least one full release cycle. High
- * priority bug fixes can be an exception to this rule of thumb.
+ * 1) Add the appropriate XRPL_FEATURE or XRPL_FIX macro definition for the
+ *    feature to features.macro with the feature's name, `Supported::no`, and
+ *    `VoteBehavior::DefaultNo`.
+ *
+ * 2) Use the generated variable name as the parameter to `view.rules.enabled()`
+ *    to control flow into new code that this feature limits. (featureName or
+ *    fixName)
+ *
+ * 3) If the feature development is COMPLETE, and the feature is ready to be
+ *    SUPPORTED, change the macro parameter in features.macro to Supported::yes.
+ *
+ * 4) In general, any newly supported amendments (`Supported::yes`) should have
+ *    a `VoteBehavior::DefaultNo` indefinitely so that external governance can
+ *    make the decision on when to activate it. High priority bug fixes can be
+ *    an exception to this rule. In such cases, ensure the fix has been
+ *    clearly communicated to the community using appropriate channels,
+ *    then change the macro parameter in features.macro to
+ *    `VoteBehavior::DefaultYes`. The communication process is beyond
+ *    the scope of these instructions.
+
+ * 5) If a supported feature (`Supported::yes`) was _ever_ in a released
+ *     version, it can never be changed back to `Supported::no`, because
+ *     it _may_ still become enabled at any time. This would cause newer
+ *     versions of `rippled` to become amendment blocked.
+ *     Instead, to prevent newer versions from voting on the feature, use
+ *     `VoteBehavior::Obsolete`. Obsolete features can not be voted for
+ *     by any versions of `rippled` built with that setting, but will still
+ *     work correctly if they get enabled. If a feature remains obsolete
+ *     for long enough that _all_ clients that could vote for it are
+ *     amendment blocked, the feature can be removed from the code
+ *     as if it was unsupported.
+ *
  *
  * When a feature has been enabled for several years, the conditional code
  * may be removed, and the feature "retired". To retire a feature:
- * 1) Remove the uint256 declaration from this file.
- * 2) MOVE the uint256 definition in Feature.cpp to the "retired features"
- *    section at the end of the file.
- * 3) CHANGE the name of the variable to start with "retired".
- * 4) CHANGE the parameters of the `registerFeature` call to `Supported::yes`
- *    and `VoteBehavior::DefaultNo`.
+ *
+ * 1) MOVE the macro definition in features.macro to the "retired features"
+ *    section at the end of the file, and change the macro to XRPL_RETIRE.
+ *
  * The feature must remain registered and supported indefinitely because it
- * still exists in the ledger, but there is no need to vote for it because
- * there's nothing to vote for. If it is removed completely from the code, any
- * instances running that code will get amendment blocked. Removing the
- * feature from the ledger is beyond the scope of these instructions.
+ * may exist in the Amendments object on ledger. There is no need to vote
+ * for it because there's nothing to vote for. If the feature definition is
+ * removed completely from the code, any instances running that code will get
+ * amendment blocked. Removing the feature from the ledger is beyond the scope
+ * of these instructions.
  *
  */
 
@@ -76,11 +93,32 @@ allAmendments();
 
 namespace detail {
 
+#pragma push_macro("XRPL_FEATURE")
+#undef XRPL_FEATURE
+#pragma push_macro("XRPL_FIX")
+#undef XRPL_FIX
+#pragma push_macro("XRPL_RETIRE")
+#undef XRPL_RETIRE
+
+#define XRPL_FEATURE(name, supported, vote) +1
+#define XRPL_FIX(name, supported, vote) +1
+#define XRPL_RETIRE(name) +1
+
 // This value SHOULD be equal to the number of amendments registered in
 // Feature.cpp. Because it's only used to reserve storage, and determine how
 // large to make the FeatureBitset, it MAY be larger. It MUST NOT be less than
 // the actual number of amendments. A LogicError on startup will verify this.
-static constexpr std::size_t numFeatures = 79;
+static constexpr std::size_t numFeatures =
+    (0 +
+#include <xrpl/protocol/detail/features.macro>
+    );
+
+#undef XRPL_RETIRE
+#pragma pop_macro("XRPL_RETIRE")
+#undef XRPL_FIX
+#pragma pop_macro("XRPL_FIX")
+#undef XRPL_FEATURE
+#pragma pop_macro("XRPL_FEATURE")
 
 /** Amendments that this server supports and the default voting behavior.
    Whether they are enabled depends on the Rules defined in the validated
@@ -151,14 +189,19 @@ public:
 
     explicit FeatureBitset(base const& b) : base(b)
     {
-        assert(b.count() == count());
+        XRPL_ASSERT(
+            b.count() == count(),
+            "ripple::FeatureBitset::FeatureBitset(base) : count match");
     }
 
     template <class... Fs>
     explicit FeatureBitset(uint256 const& f, Fs&&... fs)
     {
         initFromFeatures(f, std::forward<Fs>(fs)...);
-        assert(count() == (sizeof...(fs) + 1));
+        XRPL_ASSERT(
+            count() == (sizeof...(fs) + 1),
+            "ripple::FeatureBitset::FeatureBitset(uint256) : count and "
+            "sizeof... do match");
     }
 
     template <class Col>
@@ -166,7 +209,10 @@ public:
     {
         for (auto const& f : fs)
             set(featureToBitsetIndex(f));
-        assert(fs.size() == count());
+        XRPL_ASSERT(
+            fs.size() == count(),
+            "ripple::FeatureBitset::FeatureBitset(Container auto) : count and "
+            "size do match");
     }
 
     auto
@@ -308,70 +354,25 @@ foreachFeature(FeatureBitset bs, F&& f)
             f(bitsetIndexToFeature(i));
 }
 
-extern uint256 const featureOwnerPaysFee;
-extern uint256 const featureFlow;
-extern uint256 const featureFlowCross;
-extern uint256 const featureCryptoConditionsSuite;
-extern uint256 const fix1513;
-extern uint256 const featureDepositAuth;
-extern uint256 const featureChecks;
-extern uint256 const fix1571;
-extern uint256 const fix1543;
-extern uint256 const fix1623;
-extern uint256 const featureDepositPreauth;
-extern uint256 const fix1515;
-extern uint256 const fix1578;
-extern uint256 const featureMultiSignReserve;
-extern uint256 const fixTakerDryOfferRemoval;
-extern uint256 const fixMasterKeyAsRegularKey;
-extern uint256 const fixCheckThreading;
-extern uint256 const fixPayChanRecipientOwnerDir;
-extern uint256 const featureDeletableAccounts;
-extern uint256 const fixQualityUpperBound;
-extern uint256 const featureRequireFullyCanonicalSig;
-extern uint256 const fix1781;
-extern uint256 const featureHardenedValidations;
-extern uint256 const fixAmendmentMajorityCalc;
-extern uint256 const featureNegativeUNL;
-extern uint256 const featureTicketBatch;
-extern uint256 const featureFlowSortStrands;
-extern uint256 const fixSTAmountCanonicalize;
-extern uint256 const fixRmSmallIncreasedQOffers;
-extern uint256 const featureCheckCashMakesTrustLine;
-extern uint256 const featureNonFungibleTokensV1;
-extern uint256 const featureExpandedSignerList;
-extern uint256 const fixNFTokenDirV1;
-extern uint256 const fixNFTokenNegOffer;
-extern uint256 const featureNonFungibleTokensV1_1;
-extern uint256 const fixTrustLinesToSelf;
-extern uint256 const fixRemoveNFTokenAutoTrustLine;
-extern uint256 const featureImmediateOfferKilled;
-extern uint256 const featureDisallowIncoming;
-extern uint256 const featureXRPFees;
-extern uint256 const featureAMM;
-extern uint256 const fixUniversalNumber;
-extern uint256 const fixNonFungibleTokensV1_2;
-extern uint256 const fixNFTokenRemint;
-extern uint256 const fixReducedOffersV1;
-extern uint256 const featureClawback;
-extern uint256 const featureXChainBridge;
-extern uint256 const fixDisallowIncomingV1;
-extern uint256 const featureDID;
-extern uint256 const fixFillOrKill;
-extern uint256 const fixNFTokenReserve;
-extern uint256 const fixInnerObjTemplate;
-extern uint256 const fixAMMOverflowOffer;
-extern uint256 const featurePriceOracle;
-extern uint256 const fixEmptyDID;
-extern uint256 const fixXChainRewardRounding;
-extern uint256 const fixPreviousTxnID;
-extern uint256 const fixAMMv1_1;
-extern uint256 const featureNFTokenMintOffer;
-extern uint256 const fixReducedOffersV2;
-extern uint256 const fixEnforceNFTokenTrustline;
-extern uint256 const fixInnerObjTemplate2;
-extern uint256 const featureInvariantsV1_1;
-extern uint256 const fixNFTokenPageLinks;
+#pragma push_macro("XRPL_FEATURE")
+#undef XRPL_FEATURE
+#pragma push_macro("XRPL_FIX")
+#undef XRPL_FIX
+#pragma push_macro("XRPL_RETIRE")
+#undef XRPL_RETIRE
+
+#define XRPL_FEATURE(name, supported, vote) extern uint256 const feature##name;
+#define XRPL_FIX(name, supported, vote) extern uint256 const fix##name;
+#define XRPL_RETIRE(name)
+
+#include <xrpl/protocol/detail/features.macro>
+
+#undef XRPL_RETIRE
+#pragma pop_macro("XRPL_RETIRE")
+#undef XRPL_FIX
+#pragma pop_macro("XRPL_FIX")
+#undef XRPL_FEATURE
+#pragma pop_macro("XRPL_FEATURE")
 
 }  // namespace ripple
 

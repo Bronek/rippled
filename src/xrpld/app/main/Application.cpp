@@ -35,7 +35,6 @@
 #include <xrpld/app/main/LoadManager.h>
 #include <xrpld/app/main/NodeIdentity.h>
 #include <xrpld/app/main/NodeStoreScheduler.h>
-#include <xrpld/app/main/Tuning.h>
 #include <xrpld/app/misc/AmendmentTable.h>
 #include <xrpld/app/misc/HashRouter.h>
 #include <xrpld/app/misc/LoadFeeTrack.h>
@@ -57,10 +56,10 @@
 #include <xrpld/perflog/PerfLog.h>
 #include <xrpld/rpc/detail/RPCHelpers.h>
 #include <xrpld/shamap/NodeFamily.h>
+
 #include <xrpl/basics/ByteUtilities.h>
 #include <xrpl/basics/ResolverAsio.h>
 #include <xrpl/basics/random.h>
-#include <xrpl/basics/safe_cast.h>
 #include <xrpl/beast/asio/io_latency_probe.h>
 #include <xrpl/beast/core/LexicalCast.h>
 #include <xrpl/crypto/csprng.h>
@@ -80,15 +79,16 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
-#include <iostream>
+#include <fstream>
 #include <limits>
 #include <mutex>
 #include <optional>
-#include <sstream>
 #include <utility>
-#include <variant>
 
 namespace ripple {
+
+static void
+fixConfigPorts(Config& config, Endpoints const& endpoints);
 
 // VFALCO TODO Move the function definitions into the class declaration
 class ApplicationImp : public Application, public BasicApp
@@ -107,7 +107,7 @@ private:
             beast::insight::Event ev,
             beast::Journal journal,
             std::chrono::milliseconds interval,
-            boost::asio::io_service& ios)
+            boost::asio::io_context& ios)
             : m_event(ev)
             , m_journal(journal)
             , m_probe(interval, ios)
@@ -135,7 +135,7 @@ private:
             if (lastSample >= 500ms)
             {
                 JLOG(m_journal.warn())
-                    << "io_service latency = " << lastSample.count();
+                    << "io_context latency = " << lastSample.count();
             }
         }
 
@@ -255,8 +255,8 @@ public:
         if ((cores == 1) || ((config.NODE_SIZE == 0) && (cores == 2)))
             return 1;
 
-        // Otherwise, prefer two threads.
-        return 2;
+        // Otherwise, prefer six threads.
+        return 6;
 #endif
     }
 
@@ -284,7 +284,7 @@ public:
                   config_->CONFIG_DIR),
               *this,
               logs_->journal("PerfLog"),
-              [this] { signalStop(); }))
+              [this] { signalStop("PerfLog"); }))
 
         , m_txMaster(*this)
 
@@ -404,7 +404,7 @@ public:
               *m_jobQueue,
               *m_ledgerMaster,
               validatorKeys_,
-              get_io_service(),
+              get_io_context(),
               logs_->journal("NetworkOPs"),
               m_collectorManager->collector()))
 
@@ -431,7 +431,7 @@ public:
 
         , serverHandler_(make_ServerHandler(
               *this,
-              get_io_service(),
+              get_io_context(),
               *m_jobQueue,
               *m_networkOPs,
               *m_resourceManager,
@@ -441,8 +441,8 @@ public:
               std::make_unique<LoadFeeTrack>(logs_->journal("LoadManager")))
 
         , hashRouter_(std::make_unique<HashRouter>(
-              stopwatch(),
-              HashRouter::getDefaultHoldTime()))
+              setup_HashRouter(*config_),
+              stopwatch()))
 
         , mValidations(
               ValidationParms(),
@@ -455,22 +455,22 @@ public:
         , txQ_(
               std::make_unique<TxQ>(setup_TxQ(*config_), logs_->journal("TxQ")))
 
-        , sweepTimer_(get_io_service())
+        , sweepTimer_(get_io_context())
 
-        , entropyTimer_(get_io_service())
+        , entropyTimer_(get_io_context())
 
-        , m_signals(get_io_service())
+        , m_signals(get_io_context())
 
         , checkSigs_(true)
 
         , m_resolver(
-              ResolverAsio::New(get_io_service(), logs_->journal("Resolver")))
+              ResolverAsio::New(get_io_context(), logs_->journal("Resolver")))
 
         , m_io_latency_sampler(
               m_collectorManager->collector()->make_event("ios_latency"),
               logs_->journal("Application"),
               std::chrono::milliseconds(100),
-              get_io_service())
+              get_io_context())
         , grpcServer_(std::make_unique<GRPCServer>(*this))
     {
         initAccountIdCache(config_->getValueFor(SizedItem::accountIdCacheSize));
@@ -504,7 +504,7 @@ public:
     void
     run() override;
     void
-    signalStop(std::string msg = "") override;
+    signalStop(std::string msg) override;
     bool
     checkSigs() const override;
     void
@@ -586,14 +586,17 @@ public:
     virtual ServerHandler&
     getServerHandler() override
     {
-        assert(serverHandler_);
+        XRPL_ASSERT(
+            serverHandler_,
+            "ripple::ApplicationImp::getServerHandler : non-null server "
+            "handle");
         return *serverHandler_;
     }
 
-    boost::asio::io_service&
-    getIOService() override
+    boost::asio::io_context&
+    getIOContext() override
     {
-        return get_io_service();
+        return get_io_context();
     }
 
     std::chrono::milliseconds
@@ -792,28 +795,36 @@ public:
     Overlay&
     overlay() override
     {
-        assert(overlay_);
+        XRPL_ASSERT(
+            overlay_, "ripple::ApplicationImp::overlay : non-null overlay");
         return *overlay_;
     }
 
     TxQ&
     getTxQ() override
     {
-        assert(txQ_.get() != nullptr);
+        XRPL_ASSERT(
+            txQ_,
+            "ripple::ApplicationImp::getTxQ : non-null transaction queue");
         return *txQ_;
     }
 
     RelationalDatabase&
     getRelationalDatabase() override
     {
-        assert(mRelationalDatabase.get() != nullptr);
+        XRPL_ASSERT(
+            mRelationalDatabase,
+            "ripple::ApplicationImp::getRelationalDatabase : non-null "
+            "relational database");
         return *mRelationalDatabase;
     }
 
     DatabaseCon&
     getWalletDB() override
     {
-        assert(mWalletDB.get() != nullptr);
+        XRPL_ASSERT(
+            mWalletDB,
+            "ripple::ApplicationImp::getWalletDB : non-null wallet database");
         return *mWalletDB;
     }
 
@@ -828,7 +839,10 @@ public:
     bool
     initRelationalDatabase()
     {
-        assert(mWalletDB.get() == nullptr);
+        XRPL_ASSERT(
+            mWalletDB.get() == nullptr,
+            "ripple::ApplicationImp::initRelationalDatabase : null wallet "
+            "database");
 
         try
         {
@@ -920,9 +934,8 @@ public:
                 }))
         {
             using namespace std::chrono;
-            sweepTimer_.expires_from_now(
-                seconds{config_->SWEEP_INTERVAL.value_or(
-                    config_->getValueFor(SizedItem::sweepInterval))});
+            sweepTimer_.expires_after(seconds{config_->SWEEP_INTERVAL.value_or(
+                config_->getValueFor(SizedItem::sweepInterval))});
             sweepTimer_.async_wait(std::move(*optionalCountedHandler));
         }
     }
@@ -951,7 +964,7 @@ public:
                 }))
         {
             using namespace std::chrono_literals;
-            entropyTimer_.expires_from_now(5min);
+            entropyTimer_.expires_after(5min);
             entropyTimer_.async_wait(std::move(*optionalCountedHandler));
         }
     }
@@ -962,7 +975,7 @@ public:
         if (!config_->standalone() &&
             !getRelationalDatabase().transactionDbHasSpace(*config_))
         {
-            signalStop();
+            signalStop("Out of transaction DB space");
         }
 
         // VFALCO NOTE Does the order of calls matter?
@@ -1122,7 +1135,7 @@ public:
         return maxDisallowedLedger_;
     }
 
-    virtual const std::optional<uint256>&
+    virtual std::optional<uint256> const&
     trapTxID() const override
     {
         return trapTxID_;
@@ -1178,7 +1191,7 @@ ApplicationImp::setup(boost::program_options::variables_map const& cmdline)
             JLOG(m_journal.info()) << "Received signal " << signum;
 
             if (signum == SIGTERM || signum == SIGINT)
-                signalStop();
+                signalStop("Signal: " + to_string(signum));
         });
 
     auto debug_log = config_->getDebugLogFile();
@@ -1230,7 +1243,8 @@ ApplicationImp::setup(boost::program_options::variables_map const& cmdline)
             for (auto const& [a, vote] : amendments)
             {
                 auto const f = ripple::getRegisteredFeature(a);
-                assert(f);
+                XRPL_ASSERT(
+                    f, "ripple::ApplicationImp::setup : registered feature");
                 if (f)
                     supported.emplace_back(a, *f, vote);
             }
@@ -1345,7 +1359,8 @@ ApplicationImp::setup(boost::program_options::variables_map const& cmdline)
         if (!validators_->load(
                 localSigningKey,
                 config().section(SECTION_VALIDATORS).values(),
-                config().section(SECTION_VALIDATOR_LIST_KEYS).values()))
+                config().section(SECTION_VALIDATOR_LIST_KEYS).values(),
+                config().VALIDATOR_LIST_THRESHOLD))
         {
             JLOG(m_journal.fatal())
                 << "Invalid entry in validator configuration.";
@@ -1381,14 +1396,14 @@ ApplicationImp::setup(boost::program_options::variables_map const& cmdline)
         *serverHandler_,
         *m_resourceManager,
         *m_resolver,
-        get_io_service(),
+        get_io_context(),
         *config_,
         m_collectorManager->collector());
     add(*overlay_);  // add to PropertyStream
 
     // start first consensus round
     if (!m_networkOPs->beginConsensus(
-            m_ledgerMaster->getClosedLedger()->info().hash))
+            m_ledgerMaster->getClosedLedger()->info().hash, {}))
     {
         JLOG(m_journal.fatal()) << "Unable to start consensus";
         return false;
@@ -1401,6 +1416,7 @@ ApplicationImp::setup(boost::program_options::variables_map const& cmdline)
                 *config_, beast::logstream{m_journal.error()});
             setup.makeContexts();
             serverHandler_->setup(setup, m_journal);
+            fixConfigPorts(*config_, serverHandler_->endpoints());
         }
         catch (std::exception const& e)
         {
@@ -1522,7 +1538,11 @@ ApplicationImp::start(bool withTimers)
     m_shaMapStore->start();
     if (overlay_)
         overlay_->start();
-    grpcServer_->start();
+
+    if (grpcServer_->start())
+        fixConfigPorts(
+            *config_, {{SECTION_PORT_GRPC, grpcServer_->getEndpoint()}});
+
     ledgerCleaner_->start();
     perfLog_->start();
 }
@@ -1533,10 +1553,10 @@ ApplicationImp::run()
     if (!config_->standalone())
     {
         // VFALCO NOTE This seems unnecessary. If we properly refactor the load
-        //             manager then the deadlock detector can just always be
+        //             manager then the stall detector can just always be
         //             "armed"
         //
-        getLoadManager().activateDeadlockDetector();
+        getLoadManager().activateStallDetector();
     }
 
     {
@@ -1549,11 +1569,11 @@ ApplicationImp::run()
     m_io_latency_sampler.cancel_async();
 
     // VFALCO Enormous hack, we have to force the probe to cancel
-    //        before we stop the io_service queue or else it never
+    //        before we stop the io_context queue or else it never
     //        unblocks in its destructor. The fix is to make all
     //        io_objects gracefully handle exit so that we can
-    //        naturally return from io_service::run() instead of
-    //        forcing a call to io_service::stop()
+    //        naturally return from io_context::run() instead of
+    //        forcing a call to io_context::stop()
     m_io_latency_sampler.cancel();
 
     m_resolver->stop_async();
@@ -1564,20 +1584,24 @@ ApplicationImp::run()
     m_resolver->stop();
 
     {
-        boost::system::error_code ec;
-        sweepTimer_.cancel(ec);
-        if (ec)
+        try
+        {
+            sweepTimer_.cancel();
+        }
+        catch (boost::system::system_error const& e)
         {
             JLOG(m_journal.error())
-                << "Application: sweepTimer cancel error: " << ec.message();
+                << "Application: sweepTimer cancel error: " << e.what();
         }
 
-        ec.clear();
-        entropyTimer_.cancel(ec);
-        if (ec)
+        try
+        {
+            entropyTimer_.cancel();
+        }
+        catch (boost::system::system_error const& e)
         {
             JLOG(m_journal.error())
-                << "Application: entropyTimer cancel error: " << ec.message();
+                << "Application: entropyTimer cancel error: " << e.what();
         }
     }
 
@@ -1693,9 +1717,10 @@ ApplicationImp::startGenesisLedger()
     auto const next =
         std::make_shared<Ledger>(*genesis, timeKeeper().closeTime());
     next->updateSkipList();
-    assert(
+    XRPL_ASSERT(
         next->info().seq < XRP_LEDGER_EARLIEST_FEES ||
-        next->read(keylet::fees()));
+            next->read(keylet::fees()),
+        "ripple::ApplicationImp::startGenesisLedger : valid ledger fees");
     next->setImmutable();
     openLedger_.emplace(next, cachedSLEs_, logs_->journal("OpenLedger"));
     m_ledgerMaster->storeLedger(next);
@@ -1714,9 +1739,10 @@ ApplicationImp::getLastFullLedger()
         if (!ledger)
             return ledger;
 
-        assert(
+        XRPL_ASSERT(
             ledger->info().seq < XRP_LEDGER_EARLIEST_FEES ||
-            ledger->read(keylet::fees()));
+                ledger->read(keylet::fees()),
+            "ripple::ApplicationImp::getLastFullLedger : valid ledger fees");
         ledger->setImmutable();
 
         if (getLedgerMaster().haveLedger(seq))
@@ -1868,9 +1894,10 @@ ApplicationImp::loadLedgerFromFile(std::string const& name)
 
         loadLedger->stateMap().flushDirty(hotACCOUNT_NODE);
 
-        assert(
+        XRPL_ASSERT(
             loadLedger->info().seq < XRP_LEDGER_EARLIEST_FEES ||
-            loadLedger->read(keylet::fees()));
+                loadLedger->read(keylet::fees()),
+            "ripple::ApplicationImp::loadLedgerFromFile : valid ledger fees");
         loadLedger->setAccepted(
             closeTime, closeTimeResolution, !closeTimeEstimated);
 
@@ -1968,7 +1995,9 @@ ApplicationImp::loadOldLedger(
                 if (!loadLedger)
                 {
                     JLOG(m_journal.fatal()) << "Replay ledger missing/damaged";
-                    assert(false);
+                    UNREACHABLE(
+                        "ripple::ApplicationImp::loadOldLedger : replay ledger "
+                        "missing/damaged");
                     return false;
                 }
             }
@@ -1997,21 +2026,26 @@ ApplicationImp::loadOldLedger(
         if (loadLedger->info().accountHash.isZero())
         {
             JLOG(m_journal.fatal()) << "Ledger is empty.";
-            assert(false);
+            UNREACHABLE(
+                "ripple::ApplicationImp::loadOldLedger : ledger is empty");
             return false;
         }
 
         if (!loadLedger->walkLedger(journal("Ledger"), true))
         {
             JLOG(m_journal.fatal()) << "Ledger is missing nodes.";
-            assert(false);
+            UNREACHABLE(
+                "ripple::ApplicationImp::loadOldLedger : ledger is missing "
+                "nodes");
             return false;
         }
 
         if (!loadLedger->assertSensible(journal("Ledger")))
         {
             JLOG(m_journal.fatal()) << "Ledger is not sensible.";
-            assert(false);
+            UNREACHABLE(
+                "ripple::ApplicationImp::loadOldLedger : ledger is not "
+                "sensible");
             return false;
         }
 
@@ -2161,6 +2195,26 @@ make_Application(
 {
     return std::make_unique<ApplicationImp>(
         std::move(config), std::move(logs), std::move(timeKeeper));
+}
+
+void
+fixConfigPorts(Config& config, Endpoints const& endpoints)
+{
+    for (auto const& [name, ep] : endpoints)
+    {
+        if (!config.exists(name))
+            continue;
+
+        auto& section = config[name];
+        auto const optPort = section.get("port");
+        if (optPort)
+        {
+            std::uint16_t const port =
+                beast::lexicalCast<std::uint16_t>(*optPort);
+            if (!port)
+                section.set("port", std::to_string(ep.port()));
+        }
+    }
 }
 
 }  // namespace ripple

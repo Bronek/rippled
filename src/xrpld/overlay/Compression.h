@@ -22,7 +22,6 @@
 
 #include <xrpl/basics/CompressionAlgorithms.h>
 #include <xrpl/basics/Log.h>
-#include <lz4frame.h>
 
 namespace ripple {
 
@@ -64,7 +63,9 @@ decompress(
             JLOG(debugLog().warn())
                 << "decompress: invalid compression algorithm "
                 << static_cast<int>(algorithm);
-            assert(0);
+            UNREACHABLE(
+                "ripple::compression::decompress : invalid compression "
+                "algorithm");
         }
     }
     catch (...)
@@ -99,7 +100,9 @@ compress(
         {
             JLOG(debugLog().warn()) << "compress: invalid compression algorithm"
                                     << static_cast<int>(algorithm);
-            assert(0);
+            UNREACHABLE(
+                "ripple::compression::compress : invalid compression "
+                "algorithm");
         }
     }
     catch (...)

@@ -16,15 +16,17 @@
     OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 //==============================================================================
+
 #include <xrpld/app/ledger/LedgerMaster.h>
 #include <xrpld/app/misc/AMMUtils.h>
 #include <xrpld/ledger/ReadView.h>
 #include <xrpld/rpc/Context.h>
 #include <xrpld/rpc/detail/RPCHelpers.h>
+
 #include <xrpl/json/json_value.h>
 #include <xrpl/protocol/AMMCore.h>
 #include <xrpl/protocol/Issue.h>
-#include <xrpl/protocol/RPCErr.h>
+
 #include <grpcpp/support/status.h>
 
 namespace ripple {
@@ -132,6 +134,8 @@ doAMMInfo(RPC::JsonContext& context)
             if (!sle)
                 return Unexpected(rpcACT_MALFORMED);
             ammID = sle->getFieldH256(sfAMMID);
+            if (ammID->isZero())
+                return Unexpected(rpcACT_NOT_FOUND);
         }
 
         if (params.isMember(jss::account))
@@ -145,14 +149,15 @@ doAMMInfo(RPC::JsonContext& context)
         if (context.apiVersion >= 3 && invalid(params))
             return Unexpected(rpcINVALID_PARAMS);
 
-        assert(
+        XRPL_ASSERT(
             (issue1.has_value() == issue2.has_value()) &&
-            (issue1.has_value() != ammID.has_value()));
+                (issue1.has_value() != ammID.has_value()),
+            "ripple::doAMMInfo : issue1 and issue2 do match");
 
         auto const ammKeylet = [&]() {
             if (issue1 && issue2)
                 return keylet::amm(*issue1, *issue2);
-            assert(ammID);
+            XRPL_ASSERT(ammID, "ripple::doAMMInfo::ammKeylet : ammID is set");
             return keylet::amm(*ammID);
         }();
         auto const amm = ledger->read(ammKeylet);
@@ -160,8 +165,8 @@ doAMMInfo(RPC::JsonContext& context)
             return Unexpected(rpcACT_NOT_FOUND);
         if (!issue1 && !issue2)
         {
-            issue1 = (*amm)[sfAsset];
-            issue2 = (*amm)[sfAsset2];
+            issue1 = (*amm)[sfAsset].get<Issue>();
+            issue2 = (*amm)[sfAsset2].get<Issue>();
         }
 
         return ValuesFromContextParams{
@@ -211,9 +216,10 @@ doAMMInfo(RPC::JsonContext& context)
     }
     if (voteSlots.size() > 0)
         ammResult[jss::vote_slots] = std::move(voteSlots);
-    assert(
+    XRPL_ASSERT(
         !ledger->rules().enabled(fixInnerObjTemplate) ||
-        amm->isFieldPresent(sfAuctionSlot));
+            amm->isFieldPresent(sfAuctionSlot),
+        "ripple::doAMMInfo : auction slot is set");
     if (amm->isFieldPresent(sfAuctionSlot))
     {
         auto const& auctionSlot =

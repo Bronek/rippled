@@ -19,13 +19,14 @@
 
 #include <xrpld/overlay/Message.h>
 #include <xrpld/overlay/detail/TrafficCount.h>
+
 #include <cstdint>
 
 namespace ripple {
 
 Message::Message(
     ::google::protobuf::Message const& message,
-    int type,
+    protocol::MessageType type,
     std::optional<PublicKey> const& validator)
     : category_(TrafficCount::categorize(message, type, false))
     , validatorKey_(validator)
@@ -34,7 +35,8 @@ Message::Message(
 
     auto const messageBytes = messageSize(message);
 
-    assert(messageBytes != 0);
+    XRPL_ASSERT(
+        messageBytes, "ripple::Message::Message : non-empty message input");
 
     buffer_.resize(headerBytes + messageBytes);
 
@@ -43,7 +45,9 @@ Message::Message(
     if (messageBytes != 0)
         message.SerializeToArray(buffer_.data() + headerBytes, messageBytes);
 
-    assert(getBufferSize() == totalSize(message));
+    XRPL_ASSERT(
+        getBufferSize() == totalSize(message),
+        "ripple::Message::Message : message size matches the buffer");
 }
 
 // static

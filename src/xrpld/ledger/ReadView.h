@@ -21,13 +21,11 @@
 #define RIPPLE_LEDGER_READVIEW_H_INCLUDED
 
 #include <xrpld/ledger/detail/ReadViewFwdRange.h>
-#include <xrpl/basics/FeeUnits.h>
-#include <xrpl/basics/IOUAmount.h>
-#include <xrpl/basics/XRPAmount.h>
+
 #include <xrpl/basics/chrono.h>
 #include <xrpl/beast/hash/uhash.h>
-#include <xrpl/beast/utility/Journal.h>
 #include <xrpl/protocol/Fees.h>
+#include <xrpl/protocol/IOUAmount.h>
 #include <xrpl/protocol/Indexes.h>
 #include <xrpl/protocol/LedgerHeader.h>
 #include <xrpl/protocol/Protocol.h>
@@ -35,9 +33,8 @@
 #include <xrpl/protocol/STAmount.h>
 #include <xrpl/protocol/STLedgerEntry.h>
 #include <xrpl/protocol/STTx.h>
-#include <cassert>
+
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <unordered_set>
 
@@ -261,7 +258,7 @@ public:
     using digest_type = uint256;
 
     DigestAwareReadView() = default;
-    DigestAwareReadView(const DigestAwareReadView&) = default;
+    DigestAwareReadView(DigestAwareReadView const&) = default;
 
     /** Return the digest associated with the key.
 

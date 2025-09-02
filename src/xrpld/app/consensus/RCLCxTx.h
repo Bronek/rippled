@@ -20,10 +20,7 @@
 #ifndef RIPPLE_APP_CONSENSUS_RCLCXTX_H_INCLUDED
 #define RIPPLE_APP_CONSENSUS_RCLCXTX_H_INCLUDED
 
-#include <xrpld/app/misc/CanonicalTXSet.h>
 #include <xrpld/shamap/SHAMap.h>
-#include <xrpl/basics/chrono.h>
-#include <xrpl/protocol/UintTypes.h>
 
 namespace ripple {
 
@@ -111,7 +108,8 @@ public:
     */
     RCLTxSet(std::shared_ptr<SHAMap> m) : map_{std::move(m)}
     {
-        assert(map_);
+        XRPL_ASSERT(
+            map_, "ripple::RCLTxSet::MutableTxSet::RCLTxSet : non-null input");
     }
 
     /** Constructor from a previously created MutableTxSet
@@ -177,7 +175,9 @@ public:
         std::map<uint256, bool> ret;
         for (auto const& [k, v] : delta)
         {
-            assert((v.first && !v.second) || (v.second && !v.first));
+            XRPL_ASSERT(
+                (v.first && !v.second) || (v.second && !v.first),
+                "ripple::RCLTxSet::compare : either side is set");
 
             ret[k] = static_cast<bool>(v.first);
         }

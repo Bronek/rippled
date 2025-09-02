@@ -21,10 +21,11 @@
 #define RIPPLE_PROTOCOL_STOBJECT_H_INCLUDED
 
 #include <xrpl/basics/CountedObject.h>
-#include <xrpl/basics/FeeUnits.h>
 #include <xrpl/basics/Slice.h>
 #include <xrpl/basics/chrono.h>
 #include <xrpl/basics/contract.h>
+#include <xrpl/beast/utility/instrumentation.h>
+#include <xrpl/protocol/FeeUnits.h>
 #include <xrpl/protocol/HashPrefix.h>
 #include <xrpl/protocol/SOTemplate.h>
 #include <xrpl/protocol/STAmount.h>
@@ -34,8 +35,9 @@
 #include <xrpl/protocol/STPathSet.h>
 #include <xrpl/protocol/STVector256.h>
 #include <xrpl/protocol/detail/STVar.h>
+
 #include <boost/iterator/transform_iterator.hpp>
-#include <cassert>
+
 #include <optional>
 #include <stdexcept>
 #include <type_traits>
@@ -97,8 +99,8 @@ public:
     STObject&
     operator=(STObject&& other);
 
-    STObject(const SOTemplate& type, SField const& name);
-    STObject(const SOTemplate& type, SerialIter& sit, SField const& name);
+    STObject(SOTemplate const& type, SField const& name);
+    STObject(SOTemplate const& type, SerialIter& sit, SField const& name);
     STObject(SerialIter& sit, SField const& name, int depth = 0);
     STObject(SerialIter&& sit, SField const& name);
     explicit STObject(SField const& name);
@@ -119,7 +121,7 @@ public:
     reserve(std::size_t n);
 
     void
-    applyTemplate(const SOTemplate& type);
+    applyTemplate(SOTemplate const& type);
 
     void
     applyTemplateFromSField(SField const&);
@@ -128,7 +130,7 @@ public:
     isFree() const;
 
     void
-    set(const SOTemplate&);
+    set(SOTemplate const&);
 
     bool
     set(SerialIter& u, int depth = 0);
@@ -137,7 +139,7 @@ public:
     getSType() const override;
 
     bool
-    isEquivalent(const STBase& t) const override;
+    isEquivalent(STBase const& t) const override;
 
     bool
     isDefault() const override;
@@ -152,8 +154,7 @@ public:
     getText() const override;
 
     // TODO(tom): options should be an enum.
-    Json::Value
-    getJson(JsonOptions options) const override;
+    Json::Value getJson(JsonOptions = JsonOptions::none) const override;
 
     void
     addWithoutSigningFields(Serializer& s) const;
@@ -181,13 +182,13 @@ public:
     uint256
     getSigningHash(HashPrefix prefix) const;
 
-    const STBase&
+    STBase const&
     peekAtIndex(int offset) const;
 
     STBase&
     getIndex(int offset);
 
-    const STBase*
+    STBase const*
     peekAtPIndex(int offset) const;
 
     STBase*
@@ -199,13 +200,13 @@ public:
     SField const&
     getFieldSType(int index) const;
 
-    const STBase&
+    STBase const&
     peekAtField(SField const& field) const;
 
     STBase&
     getField(SField const& field);
 
-    const STBase*
+    STBase const*
     peekAtPField(SField const& field) const;
 
     STBase*
@@ -226,6 +227,8 @@ public:
 
     uint160
     getFieldH160(SField const& field) const;
+    uint192
+    getFieldH192(SField const& field) const;
     uint256
     getFieldH256(SField const& field) const;
     AccountID
@@ -237,12 +240,14 @@ public:
     getFieldAmount(SField const& field) const;
     STPathSet const&
     getFieldPathSet(SField const& field) const;
-    const STVector256&
+    STVector256 const&
     getFieldV256(SField const& field) const;
-    const STArray&
+    STArray const&
     getFieldArray(SField const& field) const;
-    const STCurrency&
+    STCurrency const&
     getFieldCurrency(SField const& field) const;
+    STNumber const&
+    getFieldNumber(SField const& field) const;
 
     /** Get the value of a field.
         @param A TypedField built from an SField value representing the desired
@@ -374,6 +379,8 @@ public:
     void
     setFieldCurrency(SField const& field, STCurrency const&);
     void
+    setFieldNumber(SField const& field, STNumber const&);
+    void
     setFieldPathSet(SField const& field, STPathSet const&);
     void
     setFieldV256(SField const& field, STVector256 const& v);
@@ -401,12 +408,12 @@ public:
     delField(int index);
 
     bool
-    hasMatchingEntry(const STBase&);
+    hasMatchingEntry(STBase const&);
 
     bool
-    operator==(const STObject& o) const;
+    operator==(STObject const& o) const;
     bool
-    operator!=(const STObject& o) const;
+    operator!=(STObject const& o) const;
 
     class FieldErr;
 
@@ -476,9 +483,19 @@ private:
 template <class T>
 class STObject::Proxy
 {
-protected:
+public:
     using value_type = typename T::value_type;
 
+    value_type
+    value() const;
+
+    value_type
+    operator*() const;
+
+    T const*
+    operator->() const;
+
+protected:
     STObject* st_;
     SOEStyle style_;
     TypedField<T> const* f_;
@@ -486,9 +503,6 @@ protected:
     Proxy(Proxy const&) = default;
 
     Proxy(STObject* st, TypedField<T> const* f);
-
-    value_type
-    value() const;
 
     T const*
     find() const;
@@ -498,8 +512,13 @@ protected:
     assign(U&& u);
 };
 
+// Constraint += and -= ValueProxy operators
+// to value types that support arithmetic operations
+template <typename U>
+concept IsArithmetic = std::is_arithmetic_v<U> || std::is_same_v<U, STAmount>;
+
 template <class T>
-class STObject::ValueProxy : private Proxy<T>
+class STObject::ValueProxy : public Proxy<T>
 {
 private:
     using value_type = typename T::value_type;
@@ -513,7 +532,24 @@ public:
     std::enable_if_t<std::is_assignable_v<T, U>, ValueProxy&>
     operator=(U&& u);
 
+    // Convenience operators for value types supporting
+    // arithmetic operations
+    template <IsArithmetic U>
+    ValueProxy&
+    operator+=(U const& u);
+
+    template <IsArithmetic U>
+    ValueProxy&
+    operator-=(U const& u);
+
     operator value_type() const;
+
+    template <typename U>
+    friend bool
+    operator==(U const& lhs, STObject::ValueProxy<T> const& rhs)
+    {
+        return rhs.value() == lhs;
+    }
 
 private:
     friend class STObject;
@@ -522,7 +558,7 @@ private:
 };
 
 template <class T>
-class STObject::OptionalProxy : private Proxy<T>
+class STObject::OptionalProxy : public Proxy<T>
 {
 private:
     using value_type = typename T::value_type;
@@ -541,15 +577,6 @@ public:
     */
     explicit
     operator bool() const noexcept;
-
-    /** Return the contained value
-
-        Throws:
-
-            STObject::FieldErr if !engaged()
-    */
-    value_type
-    operator*() const;
 
     operator optional_type() const;
 
@@ -695,6 +722,20 @@ STObject::Proxy<T>::value() const -> value_type
 }
 
 template <class T>
+auto
+STObject::Proxy<T>::operator*() const -> value_type
+{
+    return this->value();
+}
+
+template <class T>
+T const*
+STObject::Proxy<T>::operator->() const
+{
+    return this->find();
+}
+
+template <class T>
 inline T const*
 STObject::Proxy<T>::find() const
 {
@@ -716,7 +757,7 @@ STObject::Proxy<T>::assign(U&& u)
         t = dynamic_cast<T*>(st_->getPField(*f_, true));
     else
         t = dynamic_cast<T*>(st_->makeFieldPresent(*f_));
-    assert(t);
+    XRPL_ASSERT(t, "ripple::STObject::Proxy::assign : type cast succeeded");
     *t = std::forward<U>(u);
 }
 
@@ -728,6 +769,24 @@ std::enable_if_t<std::is_assignable_v<T, U>, STObject::ValueProxy<T>&>
 STObject::ValueProxy<T>::operator=(U&& u)
 {
     this->assign(std::forward<U>(u));
+    return *this;
+}
+
+template <typename T>
+template <IsArithmetic U>
+STObject::ValueProxy<T>&
+STObject::ValueProxy<T>::operator+=(U const& u)
+{
+    this->assign(this->value() + u);
+    return *this;
+}
+
+template <class T>
+template <IsArithmetic U>
+STObject::ValueProxy<T>&
+STObject::ValueProxy<T>::operator-=(U const& u)
+{
+    this->assign(this->value() - u);
     return *this;
 }
 
@@ -749,13 +808,6 @@ template <class T>
 STObject::OptionalProxy<T>::operator bool() const noexcept
 {
     return engaged();
-}
-
-template <class T>
-auto
-STObject::OptionalProxy<T>::operator*() const -> value_type
-{
-    return this->value();
 }
 
 template <class T>
@@ -929,7 +981,7 @@ STObject::getCount() const
     return v_.size();
 }
 
-inline const STBase&
+inline STBase const&
 STObject::peekAtIndex(int offset) const
 {
     return v_[offset].get();
@@ -941,7 +993,7 @@ STObject::getIndex(int offset)
     return v_[offset].get();
 }
 
-inline const STBase*
+inline STBase const*
 STObject::peekAtPIndex(int offset) const
 {
     return &v_[offset].get();
@@ -994,13 +1046,19 @@ STObject::at(TypedField<T> const& f) const
     if (auto const u = dynamic_cast<T const*>(b))
         return u->value();
 
-    assert(mType);
-    assert(b->getSType() == STI_NOTPRESENT);
+    XRPL_ASSERT(
+        mType,
+        "ripple::STObject::at(TypedField auto) : field template non-null");
+    XRPL_ASSERT(
+        b->getSType() == STI_NOTPRESENT,
+        "ripple::STObject::at(TypedField auto) : type not present");
 
     if (mType->style(f) == soeOPTIONAL)
         Throw<STObject::FieldErr>("Missing optional field: " + f.getName());
 
-    assert(mType->style(f) == soeDEFAULT);
+    XRPL_ASSERT(
+        mType->style(f) == soeDEFAULT,
+        "ripple::STObject::at(TypedField auto) : template style is default");
 
     // Used to help handle the case where value_type is a const reference,
     // otherwise we would return the address of a temporary.
@@ -1018,11 +1076,19 @@ STObject::at(OptionaledField<T> const& of) const
     auto const u = dynamic_cast<T const*>(b);
     if (!u)
     {
-        assert(mType);
-        assert(b->getSType() == STI_NOTPRESENT);
+        XRPL_ASSERT(
+            mType,
+            "ripple::STObject::at(OptionaledField auto) : field template "
+            "non-null");
+        XRPL_ASSERT(
+            b->getSType() == STI_NOTPRESENT,
+            "ripple::STObject::at(OptionaledField auto) : type not present");
         if (mType->style(*of.f) == soeOPTIONAL)
             return std::nullopt;
-        assert(mType->style(*of.f) == soeDEFAULT);
+        XRPL_ASSERT(
+            mType->style(*of.f) == soeDEFAULT,
+            "ripple::STObject::at(OptionaledField auto) : template style is "
+            "default");
         return typename T::value_type{};
     }
     return u->value();
@@ -1062,7 +1128,7 @@ STObject::setFieldH160(SField const& field, base_uint<160, Tag> const& v)
 }
 
 inline bool
-STObject::operator!=(const STObject& o) const
+STObject::operator!=(STObject const& o) const
 {
     return !(*this == o);
 }
@@ -1071,7 +1137,7 @@ template <typename T, typename V>
 V
 STObject::getFieldByValue(SField const& field) const
 {
-    const STBase* rf = peekAtPField(field);
+    STBase const* rf = peekAtPField(field);
 
     if (!rf)
         throwFieldNotFound(field);
@@ -1081,7 +1147,7 @@ STObject::getFieldByValue(SField const& field) const
     if (id == STI_NOTPRESENT)
         return V();  // optional field not present
 
-    const T* cf = dynamic_cast<const T*>(rf);
+    T const* cf = dynamic_cast<T const*>(rf);
 
     if (!cf)
         Throw<std::runtime_error>("Wrong field type");
@@ -1098,7 +1164,7 @@ template <typename T, typename V>
 V const&
 STObject::getFieldByConstRef(SField const& field, V const& empty) const
 {
-    const STBase* rf = peekAtPField(field);
+    STBase const* rf = peekAtPField(field);
 
     if (!rf)
         throwFieldNotFound(field);
@@ -1108,7 +1174,7 @@ STObject::getFieldByConstRef(SField const& field, V const& empty) const
     if (id == STI_NOTPRESENT)
         return empty;  // optional field not present
 
-    const T* cf = dynamic_cast<const T*>(rf);
+    T const* cf = dynamic_cast<T const*>(rf);
 
     if (!cf)
         Throw<std::runtime_error>("Wrong field type");

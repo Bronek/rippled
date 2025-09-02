@@ -23,14 +23,12 @@
 
 #include <boost/container/flat_set.hpp>
 #include <boost/endian/conversion.hpp>
+
 #include <array>
 #include <chrono>
-#include <cstdint>
 #include <cstring>
 #include <functional>
-#include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <system_error>
 #include <tuple>

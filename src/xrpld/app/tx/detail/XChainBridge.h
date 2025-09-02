@@ -21,7 +21,7 @@
 #define RIPPLE_TX_XCHAINBRIDGE_H_INCLUDED
 
 #include <xrpld/app/tx/detail/Transactor.h>
-#include <xrpl/protocol/SField.h>
+
 #include <xrpl/protocol/XChainAttestations.h>
 
 namespace ripple {
@@ -67,6 +67,9 @@ public:
     TER
     doApply() override;
 };
+
+using XChainModifyBridge = BridgeModify;
+
 //------------------------------------------------------------------------------
 
 // Claim funds from a `XChainCommit` transaction. This is normally not needed,
@@ -247,6 +250,8 @@ public:
     TER
     doApply() override;
 };
+
+using XChainAccountCreateCommit = XChainCreateAccountCommit;
 
 //------------------------------------------------------------------------------
 

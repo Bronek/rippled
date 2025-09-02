@@ -21,7 +21,7 @@
 #define RIPPLE_PROTOCOL_STISSUE_H_INCLUDED
 
 #include <xrpl/basics/CountedObject.h>
-#include <xrpl/protocol/Issue.h>
+#include <xrpl/protocol/Asset.h>
 #include <xrpl/protocol/SField.h>
 #include <xrpl/protocol/STBase.h>
 #include <xrpl/protocol/Serializer.h>
@@ -31,30 +31,43 @@ namespace ripple {
 class STIssue final : public STBase, CountedObject<STIssue>
 {
 private:
-    Issue issue_{xrpIssue()};
+    Asset asset_{xrpIssue()};
 
 public:
-    using value_type = Issue;
+    using value_type = Asset;
 
     STIssue() = default;
+    STIssue(STIssue const& rhs) = default;
 
     explicit STIssue(SerialIter& sit, SField const& name);
 
-    explicit STIssue(SField const& name, Issue const& issue);
+    template <AssetType A>
+    explicit STIssue(SField const& name, A const& issue);
 
     explicit STIssue(SField const& name);
 
-    Issue const&
-    issue() const;
+    STIssue&
+    operator=(STIssue const& rhs) = default;
 
-    Issue const&
+    template <ValidIssueType TIss>
+    TIss const&
+    get() const;
+
+    template <ValidIssueType TIss>
+    bool
+    holds() const;
+
+    value_type const&
     value() const noexcept;
 
     void
-    setIssue(Issue const& issue);
+    setIssue(Asset const& issue);
 
     SerializedTypeID
     getSType() const override;
+
+    std::string
+    getText() const override;
 
     Json::Value getJson(JsonOptions) const override;
 
@@ -62,10 +75,22 @@ public:
     add(Serializer& s) const override;
 
     bool
-    isEquivalent(const STBase& t) const override;
+    isEquivalent(STBase const& t) const override;
 
     bool
     isDefault() const override;
+
+    friend constexpr bool
+    operator==(STIssue const& lhs, STIssue const& rhs);
+
+    friend constexpr std::weak_ordering
+    operator<=>(STIssue const& lhs, STIssue const& rhs);
+
+    friend constexpr bool
+    operator==(STIssue const& lhs, Asset const& rhs);
+
+    friend constexpr std::weak_ordering
+    operator<=>(STIssue const& lhs, Asset const& rhs);
 
 private:
     STBase*
@@ -76,59 +101,72 @@ private:
     friend class detail::STVar;
 };
 
+template <AssetType A>
+STIssue::STIssue(SField const& name, A const& asset)
+    : STBase{name}, asset_{asset}
+{
+    if (holds<Issue>() && !isConsistent(asset_.get<Issue>()))
+        Throw<std::runtime_error>(
+            "Invalid asset: currency and account native mismatch");
+}
+
 STIssue
 issueFromJson(SField const& name, Json::Value const& v);
 
-inline Issue const&
-STIssue::issue() const
+template <ValidIssueType TIss>
+bool
+STIssue::holds() const
 {
-    return issue_;
+    return asset_.holds<TIss>();
 }
 
-inline Issue const&
+template <ValidIssueType TIss>
+TIss const&
+STIssue::get() const
+{
+    if (!holds<TIss>(asset_))
+        Throw<std::runtime_error>("Asset doesn't hold the requested issue");
+    return std::get<TIss>(asset_);
+}
+
+inline STIssue::value_type const&
 STIssue::value() const noexcept
 {
-    return issue_;
+    return asset_;
 }
 
 inline void
-STIssue::setIssue(Issue const& issue)
+STIssue::setIssue(Asset const& asset)
 {
-    if (isXRP(issue_.currency) != isXRP(issue_.account))
+    if (holds<Issue>() && !isConsistent(asset_.get<Issue>()))
         Throw<std::runtime_error>(
-            "invalid issue: currency and account native mismatch");
+            "Invalid asset: currency and account native mismatch");
 
-    issue_ = issue;
+    asset_ = asset;
 }
 
-inline bool
+constexpr bool
 operator==(STIssue const& lhs, STIssue const& rhs)
 {
-    return lhs.issue() == rhs.issue();
+    return lhs.asset_ == rhs.asset_;
 }
 
-inline bool
-operator!=(STIssue const& lhs, STIssue const& rhs)
+constexpr std::weak_ordering
+operator<=>(STIssue const& lhs, STIssue const& rhs)
 {
-    return !operator==(lhs, rhs);
+    return lhs.asset_ <=> rhs.asset_;
 }
 
-inline bool
-operator<(STIssue const& lhs, STIssue const& rhs)
+constexpr bool
+operator==(STIssue const& lhs, Asset const& rhs)
 {
-    return lhs.issue() < rhs.issue();
+    return lhs.asset_ == rhs;
 }
 
-inline bool
-operator==(STIssue const& lhs, Issue const& rhs)
+constexpr std::weak_ordering
+operator<=>(STIssue const& lhs, Asset const& rhs)
 {
-    return lhs.issue() == rhs;
-}
-
-inline bool
-operator<(STIssue const& lhs, Issue const& rhs)
-{
-    return lhs.issue() < rhs;
+    return lhs.asset_ <=> rhs;
 }
 
 }  // namespace ripple

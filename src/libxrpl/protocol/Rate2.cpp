@@ -17,8 +17,14 @@
 */
 //==============================================================================
 
+#include <xrpl/beast/utility/instrumentation.h>
+#include <xrpl/protocol/Asset.h>
+#include <xrpl/protocol/Issue.h>
 #include <xrpl/protocol/Quality.h>
 #include <xrpl/protocol/Rate.h>
+#include <xrpl/protocol/STAmount.h>
+
+#include <cstdint>
 
 namespace ripple {
 
@@ -46,77 +52,79 @@ transferFeeAsRate(std::uint16_t fee)
 STAmount
 multiply(STAmount const& amount, Rate const& rate)
 {
-    assert(rate.value != 0);
+    XRPL_ASSERT(rate.value, "ripple::nft::multiply : nonzero rate input");
 
     if (rate == parityRate)
         return amount;
 
-    return multiply(amount, detail::as_amount(rate), amount.issue());
+    return multiply(amount, detail::as_amount(rate), amount.asset());
 }
 
 STAmount
 multiplyRound(STAmount const& amount, Rate const& rate, bool roundUp)
 {
-    assert(rate.value != 0);
+    XRPL_ASSERT(rate.value, "ripple::nft::multiplyRound : nonzero rate input");
 
     if (rate == parityRate)
         return amount;
 
-    return mulRound(amount, detail::as_amount(rate), amount.issue(), roundUp);
+    return mulRound(amount, detail::as_amount(rate), amount.asset(), roundUp);
 }
 
 STAmount
 multiplyRound(
     STAmount const& amount,
     Rate const& rate,
-    Issue const& issue,
+    Asset const& asset,
     bool roundUp)
 {
-    assert(rate.value != 0);
+    XRPL_ASSERT(
+        rate.value, "ripple::nft::multiplyRound(Issue) : nonzero rate input");
 
     if (rate == parityRate)
     {
         return amount;
     }
 
-    return mulRound(amount, detail::as_amount(rate), issue, roundUp);
+    return mulRound(amount, detail::as_amount(rate), asset, roundUp);
 }
 
 STAmount
 divide(STAmount const& amount, Rate const& rate)
 {
-    assert(rate.value != 0);
+    XRPL_ASSERT(rate.value, "ripple::nft::divide : nonzero rate input");
 
     if (rate == parityRate)
         return amount;
 
-    return divide(amount, detail::as_amount(rate), amount.issue());
+    return divide(amount, detail::as_amount(rate), amount.asset());
 }
 
 STAmount
 divideRound(STAmount const& amount, Rate const& rate, bool roundUp)
 {
-    assert(rate.value != 0);
+    XRPL_ASSERT(rate.value, "ripple::nft::divideRound : nonzero rate input");
 
     if (rate == parityRate)
         return amount;
 
-    return divRound(amount, detail::as_amount(rate), amount.issue(), roundUp);
+    return divRound(amount, detail::as_amount(rate), amount.asset(), roundUp);
 }
 
 STAmount
 divideRound(
     STAmount const& amount,
     Rate const& rate,
-    Issue const& issue,
+    Asset const& asset,
     bool roundUp)
 {
-    assert(rate.value != 0);
+    XRPL_ASSERT(
+        rate.value, "ripple::nft::divideRound(Issue) : nonzero rate input");
 
     if (rate == parityRate)
         return amount;
 
-    return divRound(amount, detail::as_amount(rate), issue, roundUp);
+    return divRound(amount, detail::as_amount(rate), asset, roundUp);
 }
 
 }  // namespace ripple

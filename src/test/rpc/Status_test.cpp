@@ -18,9 +18,9 @@
 //==============================================================================
 
 #include <xrpld/rpc/Status.h>
+
 #include <xrpl/basics/contract.h>
 #include <xrpl/beast/unit_test.h>
-#include <algorithm>
 
 namespace ripple {
 namespace RPC {
@@ -76,7 +76,7 @@ private:
 
         {
             auto s = codeString(temBAD_AMOUNT);
-            expect(s == "temBAD_AMOUNT: Can only send positive amounts.", s);
+            expect(s == "temBAD_AMOUNT: Malformed: Bad amount.", s);
         }
 
         {
@@ -94,7 +94,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(codeString, Status, RPC);
+BEAST_DEFINE_TESTSUITE(codeString, rpc, RPC);
 
 class fillJson_test : public beast::unit_test::suite
 {
@@ -176,7 +176,7 @@ private:
             "temBAD_AMOUNT",
             temBAD_AMOUNT,
             {},
-            "temBAD_AMOUNT: Can only send positive amounts.");
+            "temBAD_AMOUNT: Malformed: Bad amount.");
 
         expectFill(
             "rpcBAD_SYNTAX",
@@ -218,7 +218,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(fillJson, Status, RPC);
+BEAST_DEFINE_TESTSUITE(fillJson, rpc, RPC);
 
 }  // namespace RPC
 }  // namespace ripple

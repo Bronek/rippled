@@ -21,18 +21,23 @@
 #include <test/jtx/JSONRPCClient.h>
 #include <test/jtx/WSClient.h>
 #include <test/jtx/envconfig.h>
+
 #include <xrpld/app/ledger/LedgerMaster.h>
 #include <xrpld/app/misc/LoadFeeTrack.h>
 #include <xrpld/app/misc/NetworkOPs.h>
 #include <xrpld/rpc/ServerHandler.h>
+
 #include <xrpl/basics/base64.h>
 #include <xrpl/beast/test/yield_to.h>
 #include <xrpl/json/json_reader.h>
+
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/beast/core/multi_buffer.hpp>
 #include <boost/beast/http.hpp>
+
 #include <algorithm>
 #include <array>
 #include <random>
@@ -161,12 +166,11 @@ class ServerStatus_test : public beast::unit_test::suite,
     {
         using namespace boost::asio;
         using namespace boost::beast::http;
-        io_service& ios = get_io_service();
+        io_context& ios = get_io_context();
         ip::tcp::resolver r{ios};
         boost::beast::multi_buffer sb;
 
-        auto it = r.async_resolve(
-            ip::tcp::resolver::query{host, std::to_string(port)}, yield[ec]);
+        auto it = r.async_resolve(host, std::to_string(port), yield[ec]);
         if (ec)
             return;
 
@@ -472,12 +476,11 @@ class ServerStatus_test : public beast::unit_test::suite,
         auto req_string = boost::lexical_cast<std::string>(req);
         req_string.erase(req_string.find_last_of("13"), std::string::npos);
 
-        io_service& ios = get_io_service();
+        io_context& ios = get_io_context();
         ip::tcp::resolver r{ios};
         boost::beast::multi_buffer sb;
 
-        auto it = r.async_resolve(
-            ip::tcp::resolver::query{*ip, std::to_string(*port)}, yield[ec]);
+        auto it = r.async_resolve(*ip, std::to_string(*port), yield[ec]);
         if (!BEAST_EXPECTS(!ec, ec.message()))
             return;
 
@@ -606,14 +609,13 @@ class ServerStatus_test : public beast::unit_test::suite,
             env.app().config()["port_rpc"].get<std::string>("ip").value();
 
         boost::system::error_code ec;
-        io_service& ios = get_io_service();
+        io_context& ios = get_io_context();
         ip::tcp::resolver r{ios};
 
         Json::Value jr;
         jr[jss::method] = "server_info";
 
-        auto it = r.async_resolve(
-            ip::tcp::resolver::query{ip, std::to_string(port)}, yield[ec]);
+        auto it = r.async_resolve(ip, std::to_string(port), yield[ec]);
         BEAST_EXPECT(!ec);
 
         std::vector<std::pair<ip::tcp::socket, boost::beast::multi_buffer>>
@@ -677,7 +679,7 @@ class ServerStatus_test : public beast::unit_test::suite,
             resp["Upgrade"] == "websocket");
         BEAST_EXPECT(
             resp.find("Connection") != resp.end() &&
-            resp["Connection"] == "upgrade");
+            boost::iequals(resp["Connection"], "upgrade"));
     }
 
     void
@@ -724,11 +726,10 @@ class ServerStatus_test : public beast::unit_test::suite,
             env.app().config()["port_ws"].get<std::string>("ip").value();
         boost::system::error_code ec;
 
-        io_service& ios = get_io_service();
+        io_context& ios = get_io_context();
         ip::tcp::resolver r{ios};
 
-        auto it = r.async_resolve(
-            ip::tcp::resolver::query{ip, std::to_string(port)}, yield[ec]);
+        auto it = r.async_resolve(ip, std::to_string(port), yield[ec]);
         if (!BEAST_EXPECT(!ec))
             return;
 
@@ -860,7 +861,7 @@ class ServerStatus_test : public beast::unit_test::suite,
 
         // mark the Network as having an Amendment Warning, but won't fail
         env.app().getOPs().setAmendmentWarned();
-        env.app().getOPs().beginConsensus(env.closed()->info().hash);
+        env.app().getOPs().beginConsensus(env.closed()->info().hash, {});
 
         // consensus doesn't change
         BEAST_EXPECT(
@@ -991,7 +992,7 @@ class ServerStatus_test : public beast::unit_test::suite,
         // mark the Network as Amendment Blocked, but still won't fail until
         // ELB is enabled (next step)
         env.app().getOPs().setAmendmentBlocked();
-        env.app().getOPs().beginConsensus(env.closed()->info().hash);
+        env.app().getOPs().beginConsensus(env.closed()->info().hash, {});
 
         // consensus now sees validation disabled
         BEAST_EXPECT(

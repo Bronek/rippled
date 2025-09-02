@@ -18,36 +18,33 @@
 //==============================================================================
 
 #include <xrpld/app/main/Application.h>
-#include <xrpld/app/main/DBInit.h>
 #include <xrpld/app/rdb/Vacuum.h>
 #include <xrpld/core/Config.h>
 #include <xrpld/core/ConfigSections.h>
 #include <xrpld/core/TimeKeeper.h>
-#include <xrpld/net/RPCCall.h>
-#include <xrpld/rpc/RPCHandler.h>
+#include <xrpld/rpc/RPCCall.h>
+
 #include <xrpl/basics/Log.h>
-#include <xrpl/basics/StringUtilities.h>
-#include <xrpl/basics/contract.h>
-#include <xrpl/beast/clock/basic_seconds_clock.h>
 #include <xrpl/beast/core/CurrentThreadName.h>
-#include <xrpl/json/to_string.h>
 #include <xrpl/protocol/BuildInfo.h>
-#include <xrpl/resource/Fees.h>
+
+#include <boost/asio/io_context.hpp>
+#include <boost/process/v1/args.hpp>
+#include <boost/process/v1/child.hpp>
+#include <boost/process/v1/exe.hpp>
 
 #ifdef ENABLE_TESTS
 #include <test/unit_test/multi_runner.h>
+
 #include <xrpl/beast/unit_test/match.h>
 #endif  // ENABLE_TESTS
+#include <boost/algorithm/string.hpp>
+#include <boost/program_options.hpp>
 
 #include <google/protobuf/stubs/common.h>
 
-#include <boost/filesystem.hpp>
-#include <boost/predef.h>
-#include <boost/process.hpp>
-#include <boost/program_options.hpp>
-
 #include <cstdlib>
-#include <iostream>
+#include <fstream>
 #include <stdexcept>
 #include <utility>
 
@@ -56,7 +53,7 @@
 #include <sys/types.h>
 #endif
 
-// Do we know the plaform we're compiling on? If you're adding new platforms
+// Do we know the platform we're compiling on? If you're adding new platforms
 // modify this check accordingly.
 #if !BOOST_OS_LINUX && !BOOST_OS_WINDOWS && !BOOST_OS_MACOS
 #error Supported platforms are: Linux, Windows and MacOS
@@ -67,6 +64,10 @@
     (BOOST_OS_MACOS && (BOOST_OS_WINDOWS || BOOST_OS_LINUX)) || \
     (BOOST_OS_WINDOWS && (BOOST_OS_LINUX || BOOST_OS_MACOS))
 #error Multiple supported platforms appear active at once
+#endif
+
+#ifdef ENABLE_VOIDSTAR
+#include "antithesis_instrumentation.h"
 #endif
 
 namespace po = boost::program_options;
@@ -119,7 +120,7 @@ adjustDescriptorLimit(int needed, beast::Journal j)
 }
 
 void
-printHelp(const po::options_description& desc)
+printHelp(po::options_description const& desc)
 {
     std::cerr
         << systemName() << "d [options] <command> <params>\n"
@@ -143,7 +144,7 @@ printHelp(const po::options_description& desc)
            "     connect <ip> [<port>]\n"
            "     consensus_info\n"
            "     deposit_authorized <source_account> <destination_account> "
-           "[<ledger>]\n"
+           "[<ledger> [<credentials>, ...]]\n"
            "     feature [<feature> [accept|reject]]\n"
            "     fetch_info [clear]\n"
            "     gateway_balances [<ledger>] <issuer_account> [ <hotwallet> [ "
@@ -174,6 +175,7 @@ printHelp(const po::options_description& desc)
            "     sign_for <signer_address> <signer_private_key> <tx_json> "
            "[offline]\n"
            "     stop\n"
+           "     simulate [<tx_blob>|<tx_json>] [<binary>]\n"
            "     submit <tx_blob>|[<private_key> <tx_json>]\n"
            "     submit_multisigned <tx_json>\n"
            "     tx <id>\n"
@@ -286,7 +288,7 @@ runUnitTests(
     if (!child)
     {
         multi_runner_parent parent_runner;
-        std::vector<boost::process::child> children;
+        std::vector<boost::process::v1::child> children;
 
         std::string const exe_name = argv[0];
         std::vector<std::string> args;
@@ -299,7 +301,8 @@ runUnitTests(
 
         for (std::size_t i = 0; i < num_jobs; ++i)
             children.emplace_back(
-                boost::process::exe = exe_name, boost::process::args = args);
+                boost::process::v1::exe = exe_name,
+                boost::process::v1::args = args);
 
         int bad_child_exits = 0;
         int terminated_child_exits = 0;
@@ -516,6 +519,12 @@ run(int argc, char** argv)
     {
         std::cout << "rippled version " << BuildInfo::getVersionString()
                   << std::endl;
+#ifdef GIT_COMMIT_HASH
+        std::cout << "Git commit hash: " << GIT_COMMIT_HASH << std::endl;
+#endif
+#ifdef GIT_BRANCH
+        std::cout << "Git build branch: " << GIT_BRANCH << std::endl;
+#endif
         return 0;
     }
 

@@ -22,16 +22,17 @@
 #include <xrpld/app/ledger/LedgerToJson.h>
 #include <xrpld/app/ledger/PendingSaves.h>
 #include <xrpld/app/ledger/TransactionMaster.h>
-#include <xrpld/app/misc/Manifest.h>
 #include <xrpld/app/rdb/RelationalDatabase.h>
 #include <xrpld/app/rdb/backend/detail/Node.h>
 #include <xrpld/core/DatabaseCon.h>
 #include <xrpld/core/SociDB.h>
+
 #include <xrpl/basics/BasicConfig.h>
 #include <xrpl/basics/StringUtilities.h>
 #include <xrpl/json/to_string.h>
-#include <boost/algorithm/string.hpp>
+
 #include <boost/range/adaptor/transformed.hpp>
+
 #include <soci/sqlite3/soci-sqlite3.h>
 
 namespace ripple {
@@ -58,7 +59,7 @@ to_string(TableType type)
         case TableType::AccountTransactions:
             return "AccountTransactions";
         default:
-            assert(false);
+            UNREACHABLE("ripple::detail::to_string : invalid TableType");
             return "Unknown";
     }
 }
@@ -202,7 +203,7 @@ saveValidatedLedger(
     if (!ledger->info().accountHash.isNonZero())
     {
         JLOG(j.fatal()) << "AH is zero: " << getJson({*ledger, {}});
-        assert(false);
+        UNREACHABLE("ripple::detail::saveValidatedLedger : zero account hash");
     }
 
     if (ledger->info().accountHash != ledger->stateMap().getHash().as_uint256())
@@ -211,10 +212,13 @@ saveValidatedLedger(
                         << " != " << ledger->stateMap().getHash();
         JLOG(j.fatal()) << "saveAcceptedLedger: seq=" << seq
                         << ", current=" << current;
-        assert(false);
+        UNREACHABLE(
+            "ripple::detail::saveValidatedLedger : mismatched account hash");
     }
 
-    assert(ledger->info().txHash == ledger->txMap().getHash().as_uint256());
+    XRPL_ASSERT(
+        ledger->info().txHash == ledger->txMap().getHash().as_uint256(),
+        "ripple::detail::saveValidatedLedger : transaction hash match");
 
     // Save the ledger header in the hashed object store
     {
@@ -335,7 +339,11 @@ saveValidatedLedger(
                             seq, acceptedLedgerTx->getEscMeta()) +
                         ";");
 
-                app.getMasterTransaction().inLedger(transactionID, seq);
+                app.getMasterTransaction().inLedger(
+                    transactionID,
+                    seq,
+                    acceptedLedgerTx->getTxnSeq(),
+                    app.config().NETWORK_ID);
             }
 
             tr.commit();
@@ -1051,7 +1059,7 @@ accountTxPage(
 
     // SQL's BETWEEN uses a closed interval ([a,b])
 
-    const char* const order = forward ? "ASC" : "DESC";
+    char const* const order = forward ? "ASC" : "DESC";
 
     if (findLedger == 0)
     {
@@ -1066,10 +1074,10 @@ accountTxPage(
     }
     else
     {
-        const char* const compare = forward ? ">=" : "<=";
-        const std::uint32_t minLedger =
+        char const* const compare = forward ? ">=" : "<=";
+        std::uint32_t const minLedger =
             forward ? findLedger + 1 : options.minLedger;
-        const std::uint32_t maxLedger =
+        std::uint32_t const maxLedger =
             forward ? options.maxLedger : findLedger - 1;
 
         auto b58acct = toBase58(options.account);

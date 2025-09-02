@@ -17,43 +17,34 @@
 */
 //==============================================================================
 
-#include <xrpld/app/ledger/AcceptedLedger.h>
 #include <xrpld/app/ledger/InboundLedgers.h>
 #include <xrpld/app/ledger/Ledger.h>
-#include <xrpld/app/ledger/LedgerMaster.h>
 #include <xrpld/app/ledger/LedgerToJson.h>
-#include <xrpld/app/ledger/OrderBookDB.h>
 #include <xrpld/app/ledger/PendingSaves.h>
-#include <xrpld/app/ledger/TransactionMaster.h>
 #include <xrpld/app/main/Application.h>
 #include <xrpld/app/misc/HashRouter.h>
-#include <xrpld/app/misc/LoadFeeTrack.h>
-#include <xrpld/app/misc/NetworkOPs.h>
 #include <xrpld/app/rdb/backend/SQLiteDatabase.h>
 #include <xrpld/consensus/LedgerTiming.h>
 #include <xrpld/core/Config.h>
 #include <xrpld/core/JobQueue.h>
 #include <xrpld/core/SociDB.h>
 #include <xrpld/nodestore/Database.h>
+#include <xrpld/nodestore/detail/DatabaseNodeImp.h>
+
 #include <xrpl/basics/Log.h>
-#include <xrpl/basics/StringUtilities.h>
 #include <xrpl/basics/contract.h>
-#include <xrpl/beast/core/LexicalCast.h>
+#include <xrpl/beast/utility/instrumentation.h>
 #include <xrpl/json/to_string.h>
 #include <xrpl/protocol/Feature.h>
 #include <xrpl/protocol/HashPrefix.h>
 #include <xrpl/protocol/Indexes.h>
 #include <xrpl/protocol/PublicKey.h>
 #include <xrpl/protocol/SecretKey.h>
-#include <xrpl/protocol/UintTypes.h>
 #include <xrpl/protocol/digest.h>
 #include <xrpl/protocol/jss.h>
-#include <boost/optional.hpp>
-#include <cassert>
+
 #include <utility>
 #include <vector>
-
-#include <xrpld/nodestore/detail/DatabaseNodeImp.h>
 
 namespace ripple {
 
@@ -369,7 +360,7 @@ Ledger::setAccepted(
     bool correctCloseTime)
 {
     // Used when we witnessed the consensus.
-    assert(!open());
+    XRPL_ASSERT(!open(), "ripple::Ledger::setAccepted : valid ledger state");
 
     info_.closeTime = closeTime;
     info_.closeTimeResolution = closeResolution;
@@ -442,7 +433,7 @@ Ledger::read(Keylet const& k) const
 {
     if (k.key == beast::zero)
     {
-        assert(false);
+        UNREACHABLE("ripple::Ledger::read : zero key");
         return nullptr;
     }
     auto const& item = stateMap_.peekItem(k.key);
@@ -562,7 +553,8 @@ Ledger::rawTxInsert(
     std::shared_ptr<Serializer const> const& txn,
     std::shared_ptr<Serializer const> const& metaData)
 {
-    assert(metaData);
+    XRPL_ASSERT(
+        metaData, "ripple::Ledger::rawTxInsert : non-null metadata input");
 
     // low-level - just add to table
     Serializer s(txn->getDataLength() + metaData->getDataLength() + 16);
@@ -579,7 +571,9 @@ Ledger::rawTxInsertWithHash(
     std::shared_ptr<Serializer const> const& txn,
     std::shared_ptr<Serializer const> const& metaData)
 {
-    assert(metaData);
+    XRPL_ASSERT(
+        metaData,
+        "ripple::Ledger::rawTxInsertWithHash : non-null metadata input");
 
     // low-level - just add to table
     Serializer s(txn->getDataLength() + metaData->getDataLength() + 16);
@@ -675,7 +669,9 @@ Ledger::setup()
 void
 Ledger::defaultFees(Config const& config)
 {
-    assert(fees_.base == 0 && fees_.reserve == 0 && fees_.increment == 0);
+    XRPL_ASSERT(
+        fees_.base == 0 && fees_.reserve == 0 && fees_.increment == 0,
+        "ripple::Ledger::defaultFees : zero fees");
     if (fees_.base == 0)
         fees_.base = config.FEES.reference_fee;
     if (fees_.reserve == 0)
@@ -871,7 +867,7 @@ Ledger::assertSensible(beast::Journal ledgerJ) const
 
     JLOG(ledgerJ.fatal()) << "ledger is not sensible" << j;
 
-    assert(false);
+    UNREACHABLE("ripple::Ledger::assertSensible : ledger is not sensible");
 
     return false;
 }
@@ -905,7 +901,9 @@ Ledger::updateSkipList()
             created = false;
         }
 
-        assert(hashes.size() <= 256);
+        XRPL_ASSERT(
+            hashes.size() <= 256,
+            "ripple::Ledger::updateSkipList : first maximum hashes size");
         hashes.push_back(info_.parentHash);
         sle->setFieldV256(sfHashes, STVector256(hashes));
         sle->setFieldU32(sfLastLedgerSequence, prevIndex);
@@ -930,7 +928,9 @@ Ledger::updateSkipList()
         hashes = static_cast<decltype(hashes)>(sle->getFieldV256(sfHashes));
         created = false;
     }
-    assert(hashes.size() <= 256);
+    XRPL_ASSERT(
+        hashes.size() <= 256,
+        "ripple::Ledger::updateSkipList : second maximum hashes size");
     if (hashes.size() == 256)
         hashes.erase(hashes.begin());
     hashes.push_back(info_.parentHash);
@@ -996,7 +996,8 @@ pendSaveValidated(
     bool isSynchronous,
     bool isCurrent)
 {
-    if (!app.getHashRouter().setFlags(ledger->info().hash, SF_SAVED))
+    if (!app.getHashRouter().setFlags(
+            ledger->info().hash, HashRouterFlags::SAVED))
     {
         // We have tried to save this ledger recently
         auto stream = app.journal("Ledger").debug();
@@ -1010,7 +1011,8 @@ pendSaveValidated(
         }
     }
 
-    assert(ledger->isImmutable());
+    XRPL_ASSERT(
+        ledger->isImmutable(), "ripple::pendSaveValidated : immutable ledger");
 
     if (!app.pendingSaves().shouldWork(ledger->info().seq, isSynchronous))
     {
@@ -1087,9 +1089,10 @@ finishLoadByIndexOrHash(
     if (!ledger)
         return;
 
-    assert(
+    XRPL_ASSERT(
         ledger->info().seq < XRP_LEDGER_EARLIEST_FEES ||
-        ledger->read(keylet::fees()));
+            ledger->read(keylet::fees()),
+        "ripple::finishLoadByIndexOrHash : valid ledger fees");
     ledger->setImmutable();
 
     JLOG(j.trace()) << "Loaded ledger: " << to_string(ledger->info().hash);
@@ -1100,7 +1103,7 @@ finishLoadByIndexOrHash(
 std::tuple<std::shared_ptr<Ledger>, std::uint32_t, uint256>
 getLatestLedger(Application& app)
 {
-    const std::optional<LedgerInfo> info =
+    std::optional<LedgerInfo> const info =
         app.getRelationalDatabase().getNewestLedgerInfo();
     if (!info)
         return {std::shared_ptr<Ledger>(), {}, {}};
@@ -1128,7 +1131,9 @@ loadByHash(uint256 const& ledgerHash, Application& app, bool acquire)
     {
         std::shared_ptr<Ledger> ledger = loadLedgerHelper(*info, app, acquire);
         finishLoadByIndexOrHash(ledger, app.config(), app.journal("Ledger"));
-        assert(!ledger || ledger->info().hash == ledgerHash);
+        XRPL_ASSERT(
+            !ledger || ledger->info().hash == ledgerHash,
+            "ripple::loadByHash : ledger hash match if loaded");
         return ledger;
     }
     return {};

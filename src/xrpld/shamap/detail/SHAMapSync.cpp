@@ -19,6 +19,7 @@
 
 #include <xrpld/shamap/SHAMap.h>
 #include <xrpld/shamap/SHAMapSyncFilter.h>
+
 #include <xrpl/basics/random.h>
 
 namespace ripple {
@@ -46,10 +47,10 @@ SHAMap::visitNodes(std::function<bool(SHAMapTreeNode&)> const& function) const
     if (!root_->isInner())
         return;
 
-    using StackEntry = std::pair<int, std::shared_ptr<SHAMapInnerNode>>;
+    using StackEntry = std::pair<int, intr_ptr::SharedPtr<SHAMapInnerNode>>;
     std::stack<StackEntry, std::vector<StackEntry>> stack;
 
-    auto node = std::static_pointer_cast<SHAMapInnerNode>(root_);
+    auto node = intr_ptr::static_pointer_cast<SHAMapInnerNode>(root_);
     int pos = 0;
 
     while (true)
@@ -58,8 +59,8 @@ SHAMap::visitNodes(std::function<bool(SHAMapTreeNode&)> const& function) const
         {
             if (!node->isEmptyBranch(pos))
             {
-                std::shared_ptr<SHAMapTreeNode> child =
-                    descendNoStore(node, pos);
+                intr_ptr::SharedPtr<SHAMapTreeNode> child =
+                    descendNoStore(*node, pos);
                 if (!function(*child))
                     return;
 
@@ -78,7 +79,8 @@ SHAMap::visitNodes(std::function<bool(SHAMapTreeNode&)> const& function) const
                     }
 
                     // descend to the child's first position
-                    node = std::static_pointer_cast<SHAMapInnerNode>(child);
+                    node =
+                        intr_ptr::static_pointer_cast<SHAMapInnerNode>(child);
                     pos = 0;
                 }
             }
@@ -114,7 +116,7 @@ SHAMap::visitDifferences(
 
     if (root_->isLeaf())
     {
-        auto leaf = std::static_pointer_cast<SHAMapLeafNode>(root_);
+        auto leaf = intr_ptr::static_pointer_cast<SHAMapLeafNode>(root_);
         if (!have ||
             !have->hasLeafNode(leaf->peekItem()->key(), leaf->getHash()))
             function(*root_);
@@ -201,7 +203,8 @@ SHAMap::gmn_ProcessNodes(MissingNodes& mn, MissingNodes::StackEntry& se)
                 mn.filter_,
                 pending,
                 [node, nodeID, branch, &mn](
-                    std::shared_ptr<SHAMapTreeNode> found, SHAMapHash const&) {
+                    intr_ptr::SharedPtr<SHAMapTreeNode> found,
+                    SHAMapHash const&) {
                     // a read completed asynchronously
                     std::unique_lock<std::mutex> lock{mn.deferLock_};
                     mn.finishedReads_.emplace_back(
@@ -270,7 +273,7 @@ SHAMap::gmn_ProcessDeferredReads(MissingNodes& mn)
             SHAMapInnerNode*,
             SHAMapNodeID,
             int,
-            std::shared_ptr<SHAMapTreeNode>>
+            intr_ptr::SharedPtr<SHAMapTreeNode>>
             deferredNode;
         {
             std::unique_lock<std::mutex> lock{mn.deferLock_};
@@ -314,8 +317,10 @@ SHAMap::gmn_ProcessDeferredReads(MissingNodes& mn)
 std::vector<std::pair<SHAMapNodeID, uint256>>
 SHAMap::getMissingNodes(int max, SHAMapSyncFilter* filter)
 {
-    assert(root_->getHash().isNonZero());
-    assert(max > 0);
+    XRPL_ASSERT(
+        root_->getHash().isNonZero(),
+        "ripple::SHAMap::getMissingNodes : nonzero root hash");
+    XRPL_ASSERT(max > 0, "ripple::SHAMap::getMissingNodes : valid max input");
 
     MissingNodes mn(
         max,
@@ -324,7 +329,7 @@ SHAMap::getMissingNodes(int max, SHAMapSyncFilter* filter)
         f_.getFullBelowCache()->getGeneration());
 
     if (!root_->isInner() ||
-        std::static_pointer_cast<SHAMapInnerNode>(root_)->isFullBelow(
+        intr_ptr::static_pointer_cast<SHAMapInnerNode>(root_)->isFullBelow(
             mn.generation_))
     {
         clearSynching();
@@ -374,7 +379,9 @@ SHAMap::getMissingNodes(int max, SHAMapSyncFilter* filter)
                     // This is a node we are continuing to process
                     fullBelow = fullBelow && was;  // was and still is
                 }
-                assert(node);
+                XRPL_ASSERT(
+                    node,
+                    "ripple::SHAMap::getMissingNodes : first non-null node");
             }
         }
 
@@ -405,7 +412,9 @@ SHAMap::getMissingNodes(int max, SHAMapSyncFilter* filter)
                 // Resume at the top of the stack
                 pos = mn.stack_.top();
                 mn.stack_.pop();
-                assert(node != nullptr);
+                XRPL_ASSERT(
+                    node,
+                    "ripple::SHAMap::getMissingNodes : second non-null node");
             }
         }
 
@@ -532,11 +541,13 @@ SHAMap::addRootNode(
     if (root_->getHash().isNonZero())
     {
         JLOG(journal_.trace()) << "got root node, already have one";
-        assert(root_->getHash() == hash);
+        XRPL_ASSERT(
+            root_->getHash() == hash,
+            "ripple::SHAMap::addRootNode : valid hash input");
         return SHAMapAddNode::duplicate();
     }
 
-    assert(cowid_ >= 1);
+    XRPL_ASSERT(cowid_ >= 1, "ripple::SHAMap::addRootNode : valid cowid");
     auto node = SHAMapTreeNode::makeFromWire(rootNode);
     if (!node || node->getHash() != hash)
         return SHAMapAddNode::invalid();
@@ -566,11 +577,12 @@ SHAMap::addRootNode(
 
 SHAMapAddNode
 SHAMap::addKnownNode(
-    const SHAMapNodeID& node,
+    SHAMapNodeID const& node,
     Slice const& rawNode,
     SHAMapSyncFilter* filter)
 {
-    assert(!node.isRoot());
+    XRPL_ASSERT(
+        !node.isRoot(), "ripple::SHAMap::addKnownNode : valid node input");
 
     if (!isSynching())
     {
@@ -587,7 +599,7 @@ SHAMap::addKnownNode(
            (iNodeID.getDepth() < node.getDepth()))
     {
         int branch = selectBranch(iNodeID, node.getNodeID());
-        assert(branch >= 0);
+        XRPL_ASSERT(branch >= 0, "ripple::SHAMap::addKnownNode : valid branch");
         auto inner = static_cast<SHAMapInnerNode*>(iNode);
         if (inner->isEmptyBranch(branch))
         {
@@ -797,8 +809,9 @@ SHAMap::getProofPath(uint256 const& key) const
     }
 
     if (auto const& node = stack.top().first; !node || node->isInner() ||
-        std::static_pointer_cast<SHAMapLeafNode>(node)->peekItem()->key() !=
-            key)
+        intr_ptr::static_pointer_cast<SHAMapLeafNode>(node)
+                ->peekItem()
+                ->key() != key)
     {
         JLOG(journal_.debug()) << "no path to " << key;
         return {};

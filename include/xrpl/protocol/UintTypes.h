@@ -58,6 +58,14 @@ using Currency = base_uint<160, detail::CurrencyTag>;
 /** NodeID is a 160-bit hash representing one node. */
 using NodeID = base_uint<160, detail::NodeIDTag>;
 
+/** MPTID is a 192-bit value representing MPT Issuance ID,
+ * which is a concatenation of a 32-bit sequence (big endian)
+ * and a 160-bit account */
+using MPTID = base_uint<192>;
+
+/** Domain is a 256-bit hash representing a specific domain. */
+using Domain = base_uint<256>;
+
 /** XRP currency. */
 Currency const&
 xrpCurrency();
@@ -114,19 +122,25 @@ namespace std {
 template <>
 struct hash<ripple::Currency> : ripple::Currency::hasher
 {
-    explicit hash() = default;
+    hash() = default;
 };
 
 template <>
 struct hash<ripple::NodeID> : ripple::NodeID::hasher
 {
-    explicit hash() = default;
+    hash() = default;
 };
 
 template <>
 struct hash<ripple::Directory> : ripple::Directory::hasher
 {
-    explicit hash() = default;
+    hash() = default;
+};
+
+template <>
+struct hash<ripple::uint256> : ripple::uint256::hasher
+{
+    hash() = default;
 };
 
 }  // namespace std

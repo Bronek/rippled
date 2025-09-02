@@ -21,12 +21,14 @@
 #define RIPPLE_SERVER_BASEPEER_H_INCLUDED
 
 #include <xrpl/beast/utility/WrappedSink.h>
+#include <xrpl/beast/utility/instrumentation.h>
 #include <xrpl/server/Port.h>
 #include <xrpl/server/detail/LowestLayer.h>
 #include <xrpl/server/detail/io_list.h>
+
 #include <boost/asio.hpp>
+
 #include <atomic>
-#include <cassert>
 #include <functional>
 #include <string>
 
@@ -89,8 +91,8 @@ BasePeer<Handler, Impl>::BasePeer(
               return "##" + std::to_string(++id) + " ";
           }())
     , j_(sink_)
-    , work_(executor)
-    , strand_(executor)
+    , work_(boost::asio::make_work_guard(executor))
+    , strand_(boost::asio::make_strand(executor))
 {
 }
 

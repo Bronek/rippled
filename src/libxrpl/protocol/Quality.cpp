@@ -17,8 +17,13 @@
 */
 //==============================================================================
 
+#include <xrpl/beast/utility/Zero.h>
+#include <xrpl/beast/utility/instrumentation.h>
+#include <xrpl/protocol/Asset.h>
 #include <xrpl/protocol/Quality.h>
-#include <cassert>
+#include <xrpl/protocol/STAmount.h>
+
+#include <cstdint>
 #include <limits>
 
 namespace ripple {
@@ -35,7 +40,7 @@ Quality::Quality(Amounts const& amount)
 Quality&
 Quality::operator++()
 {
-    assert(m_value > 0);
+    XRPL_ASSERT(m_value > 0, "ripple::Quality::operator++() : minimum value");
     --m_value;
     return *this;
 }
@@ -51,7 +56,9 @@ Quality::operator++(int)
 Quality&
 Quality::operator--()
 {
-    assert(m_value < std::numeric_limits<value_type>::max());
+    XRPL_ASSERT(
+        m_value < std::numeric_limits<value_type>::max(),
+        "ripple::Quality::operator--() : maximum value");
     ++m_value;
     return *this;
 }
@@ -65,7 +72,7 @@ Quality::operator--(int)
 }
 
 template <STAmount (
-    *DivRoundFunc)(STAmount const&, STAmount const&, Issue const&, bool)>
+    *DivRoundFunc)(STAmount const&, STAmount const&, Asset const&, bool)>
 static Amounts
 ceil_in_impl(
     Amounts const& amount,
@@ -77,14 +84,16 @@ ceil_in_impl(
     {
         Amounts result(
             limit,
-            DivRoundFunc(limit, quality.rate(), amount.out.issue(), roundUp));
+            DivRoundFunc(limit, quality.rate(), amount.out.asset(), roundUp));
         // Clamp out
         if (result.out > amount.out)
             result.out = amount.out;
-        assert(result.in == limit);
+        XRPL_ASSERT(
+            result.in == limit, "ripple::ceil_in_impl : result matches limit");
         return result;
     }
-    assert(amount.in <= limit);
+    XRPL_ASSERT(
+        amount.in <= limit, "ripple::ceil_in_impl : result inside limit");
     return amount;
 }
 
@@ -104,7 +113,7 @@ Quality::ceil_in_strict(
 }
 
 template <STAmount (
-    *MulRoundFunc)(STAmount const&, STAmount const&, Issue const&, bool)>
+    *MulRoundFunc)(STAmount const&, STAmount const&, Asset const&, bool)>
 static Amounts
 ceil_out_impl(
     Amounts const& amount,
@@ -115,15 +124,18 @@ ceil_out_impl(
     if (amount.out > limit)
     {
         Amounts result(
-            MulRoundFunc(limit, quality.rate(), amount.in.issue(), roundUp),
+            MulRoundFunc(limit, quality.rate(), amount.in.asset(), roundUp),
             limit);
         // Clamp in
         if (result.in > amount.in)
             result.in = amount.in;
-        assert(result.out == limit);
+        XRPL_ASSERT(
+            result.out == limit,
+            "ripple::ceil_out_impl : result matches limit");
         return result;
     }
-    assert(amount.out <= limit);
+    XRPL_ASSERT(
+        amount.out <= limit, "ripple::ceil_out_impl : result inside limit");
     return amount;
 }
 
@@ -146,17 +158,23 @@ Quality
 composed_quality(Quality const& lhs, Quality const& rhs)
 {
     STAmount const lhs_rate(lhs.rate());
-    assert(lhs_rate != beast::zero);
+    XRPL_ASSERT(
+        lhs_rate != beast::zero,
+        "ripple::composed_quality : nonzero left input");
 
     STAmount const rhs_rate(rhs.rate());
-    assert(rhs_rate != beast::zero);
+    XRPL_ASSERT(
+        rhs_rate != beast::zero,
+        "ripple::composed_quality : nonzero right input");
 
-    STAmount const rate(mulRound(lhs_rate, rhs_rate, lhs_rate.issue(), true));
+    STAmount const rate(mulRound(lhs_rate, rhs_rate, lhs_rate.asset(), true));
 
     std::uint64_t const stored_exponent(rate.exponent() + 100);
     std::uint64_t const stored_mantissa(rate.mantissa());
 
-    assert((stored_exponent > 0) && (stored_exponent <= 255));
+    XRPL_ASSERT(
+        (stored_exponent > 0) && (stored_exponent <= 255),
+        "ripple::composed_quality : valid exponent");
 
     return Quality((stored_exponent << (64 - 8)) | stored_mantissa);
 }
@@ -165,7 +183,7 @@ Quality
 Quality::round(int digits) const
 {
     // Modulus for mantissa
-    static const std::uint64_t mod[17] = {
+    static std::uint64_t const mod[17] = {
         /* 0 */ 10000000000000000,
         /* 1 */ 1000000000000000,
         /* 2 */ 100000000000000,

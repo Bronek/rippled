@@ -18,7 +18,9 @@
 #include <test/jtx.h>
 #include <test/jtx/JSONRPCClient.h>
 #include <test/jtx/WSClient.h>
+
 #include <xrpld/core/ConfigSections.h>
+
 #include <xrpl/beast/unit_test.h>
 #include <xrpl/protocol/jss.h>
 
@@ -85,7 +87,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(RPCOverload, app, ripple);
+BEAST_DEFINE_TESTSUITE(RPCOverload, rpc, ripple);
 
 }  // namespace test
 }  // namespace ripple

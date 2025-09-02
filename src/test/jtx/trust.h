@@ -21,6 +21,7 @@
 #define RIPPLE_TEST_JTX_TRUST_H_INCLUDED
 
 #include <test/jtx/Account.h>
+
 #include <xrpl/json/json_value.h>
 #include <xrpl/protocol/STAmount.h>
 
@@ -41,7 +42,10 @@ trust(
     std::uint32_t flags);
 
 Json::Value
-claw(Account const& account, STAmount const& amount);
+claw(
+    Account const& account,
+    STAmount const& amount,
+    std::optional<Account> const& mptHolder = std::nullopt);
 
 }  // namespace jtx
 }  // namespace test

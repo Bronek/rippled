@@ -21,6 +21,7 @@
 #include <xrpld/app/ledger/LedgerCleaner.h>
 #include <xrpld/app/ledger/LedgerMaster.h>
 #include <xrpld/app/misc/LoadFeeTrack.h>
+
 #include <xrpl/beast/core/CurrentThreadName.h>
 #include <xrpl/protocol/jss.h>
 
@@ -231,7 +232,9 @@ private:
                 });
                 if (shouldExit_)
                     break;
-                assert(state_ == State::cleaning);
+                XRPL_ASSERT(
+                    state_ == State::cleaning,
+                    "ripple::LedgerCleanerImp::run : is cleaning");
             }
             doLedgerCleaner();
         }
@@ -353,7 +356,9 @@ private:
                 LedgerHash refHash = getLedgerHash(referenceLedger, refIndex);
 
                 bool const nonzero(refHash.isNonZero());
-                assert(nonzero);
+                XRPL_ASSERT(
+                    nonzero,
+                    "ripple::LedgerCleanerImp::getHash : nonzero hash");
                 if (nonzero)
                 {
                     // We found the hash and sequence of a better reference

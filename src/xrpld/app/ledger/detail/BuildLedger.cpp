@@ -21,9 +21,9 @@
 #include <xrpld/app/ledger/Ledger.h>
 #include <xrpld/app/ledger/LedgerReplay.h>
 #include <xrpld/app/ledger/OpenLedger.h>
-#include <xrpld/app/main/Application.h>
 #include <xrpld/app/misc/CanonicalTXSet.h>
 #include <xrpld/app/tx/apply.h>
+
 #include <xrpl/protocol/Feature.h>
 
 namespace ripple {
@@ -39,7 +39,7 @@ std::shared_ptr<Ledger>
 buildLedgerImpl(
     std::shared_ptr<Ledger const> const& parent,
     NetClock::time_point closeTime,
-    const bool closeTimeCorrect,
+    bool const closeTimeCorrect,
     NetClock::duration closeResolution,
     Application& app,
     beast::Journal j,
@@ -57,7 +57,8 @@ buildLedgerImpl(
 
     {
         OpenView accum(&*built);
-        assert(!accum.open());
+        XRPL_ASSERT(
+            !accum.open(), "ripple::buildLedgerImpl : valid ledger state");
         applyTxs(accum, built);
         accum.apply(*built);
     }
@@ -75,9 +76,10 @@ buildLedgerImpl(
     built->unshare();
 
     // Accept ledger
-    assert(
+    XRPL_ASSERT(
         built->info().seq < XRP_LEDGER_EARLIEST_FEES ||
-        built->read(keylet::fees()));
+            built->read(keylet::fees()),
+        "ripple::buildLedgerImpl : valid ledger fees");
     built->setAccepted(closeTime, closeResolution, closeTimeCorrect);
 
     return built;
@@ -129,17 +131,17 @@ applyTransactions(
                 switch (applyTransaction(
                     app, view, *it->second, certainRetry, tapNONE, j))
                 {
-                    case ApplyResult::Success:
+                    case ApplyTransactionResult::Success:
                         it = txns.erase(it);
                         ++changes;
                         break;
 
-                    case ApplyResult::Fail:
+                    case ApplyTransactionResult::Fail:
                         failed.insert(txid);
                         it = txns.erase(it);
                         break;
 
-                    case ApplyResult::Retry:
+                    case ApplyTransactionResult::Retry:
                         ++it;
                 }
             }
@@ -169,7 +171,9 @@ applyTransactions(
 
     // If there are any transactions left, we must have
     // tried them in at least one final pass
-    assert(txns.empty() || !certainRetry);
+    XRPL_ASSERT(
+        txns.empty() || !certainRetry,
+        "ripple::applyTransactions : retry transactions");
     return count;
 }
 
@@ -178,7 +182,7 @@ std::shared_ptr<Ledger>
 buildLedger(
     std::shared_ptr<Ledger const> const& parent,
     NetClock::time_point closeTime,
-    const bool closeTimeCorrect,
+    bool const closeTimeCorrect,
     NetClock::duration closeResolution,
     Application& app,
     CanonicalTXSet& txns,
@@ -204,11 +208,17 @@ buildLedger(
                 applyTransactions(app, built, txns, failedTxns, accum, j);
 
             if (!txns.empty() || !failedTxns.empty())
-                JLOG(j.debug()) << "Applied " << applied << " transactions; "
-                                << failedTxns.size() << " failed and "
-                                << txns.size() << " will be retried.";
+                JLOG(j.debug())
+                    << "Applied " << applied << " transactions; "
+                    << failedTxns.size() << " failed and " << txns.size()
+                    << " will be retried. "
+                    << "Total transactions in ledger (including Inner Batch): "
+                    << accum.txCount();
             else
-                JLOG(j.debug()) << "Applied " << applied << " transactions.";
+                JLOG(j.debug())
+                    << "Applied " << applied << " transactions. "
+                    << "Total transactions in ledger (including Inner Batch): "
+                    << accum.txCount();
         });
 }
 

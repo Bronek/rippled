@@ -20,8 +20,10 @@
 #ifndef RIPPLE_OVERLAY_ZEROCOPYSTREAM_H_INCLUDED
 #define RIPPLE_OVERLAY_ZEROCOPYSTREAM_H_INCLUDED
 
+#include <xrpl/beast/utility/instrumentation.h>
+
 #include <boost/asio/buffer.hpp>
-#include <cstdint>
+
 #include <google/protobuf/io/zero_copy_stream.h>
 
 namespace ripple {
@@ -47,7 +49,7 @@ public:
     explicit ZeroCopyInputStream(Buffers const& buffers);
 
     bool
-    Next(const void** data, int* size) override;
+    Next(void const** data, int* size) override;
 
     void
     BackUp(int count) override;
@@ -74,9 +76,9 @@ ZeroCopyInputStream<Buffers>::ZeroCopyInputStream(Buffers const& buffers)
 
 template <class Buffers>
 bool
-ZeroCopyInputStream<Buffers>::Next(const void** data, int* size)
+ZeroCopyInputStream<Buffers>::Next(void const** data, int* size)
 {
-    *data = boost::asio::buffer_cast<void const*>(pos_);
+    *data = pos_.data();
     *size = boost::asio::buffer_size(pos_);
     if (first_ == last_)
         return false;
@@ -193,7 +195,7 @@ ZeroCopyOutputStream<Streambuf>::Next(void** data, int* size)
         pos_ = buffers_.begin();
     }
 
-    *data = boost::asio::buffer_cast<void*>(*pos_);
+    *data = *pos_.data();
     *size = boost::asio::buffer_size(*pos_);
     commit_ = *size;
     ++pos_;
@@ -204,7 +206,8 @@ template <class Streambuf>
 void
 ZeroCopyOutputStream<Streambuf>::BackUp(int count)
 {
-    assert(count <= commit_);
+    XRPL_ASSERT(
+        count <= commit_, "ripple::ZeroCopyOutputStream::BackUp : valid input");
     auto const n = commit_ - count;
     streambuf_.commit(n);
     count_ += n;

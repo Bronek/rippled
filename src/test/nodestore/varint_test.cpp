@@ -18,7 +18,9 @@
 //==============================================================================
 
 #include <xrpld/nodestore/detail/varint.h>
+
 #include <xrpl/beast/unit_test.h>
+
 #include <array>
 #include <vector>
 
@@ -70,7 +72,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(varint, NodeStore, ripple);
+BEAST_DEFINE_TESTSUITE(varint, nodestore, ripple);
 
 }  // namespace tests
 }  // namespace NodeStore

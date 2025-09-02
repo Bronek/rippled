@@ -17,12 +17,12 @@
 */
 //==============================================================================
 
-#include <xrpld/app/main/Application.h>
 #include <xrpld/ledger/ReadView.h>
 #include <xrpld/ledger/View.h>
 #include <xrpld/rpc/Context.h>
 #include <xrpld/rpc/detail/RPCHelpers.h>
 #include <xrpld/rpc/detail/Tuning.h>
+
 #include <xrpl/json/json_value.h>
 #include <xrpl/protocol/ErrorCodes.h>
 #include <xrpl/protocol/RPCErr.h>
@@ -145,7 +145,7 @@ doAccountOffers(RPC::JsonContext& context)
                 std::shared_ptr<SLE const> const& sle) {
                 if (!sle)
                 {
-                    assert(false);
+                    UNREACHABLE("ripple::doAccountOffers : null SLE");
                     return false;
                 }
 

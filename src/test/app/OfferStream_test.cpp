@@ -18,6 +18,7 @@
 //==============================================================================
 
 #include <xrpld/app/tx/detail/OfferStream.h>
+
 #include <xrpl/beast/unit_test.h>
 
 namespace ripple {
@@ -38,6 +39,6 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(OfferStream, tx, ripple);
+BEAST_DEFINE_TESTSUITE(OfferStream, app, ripple);
 
 }  // namespace ripple

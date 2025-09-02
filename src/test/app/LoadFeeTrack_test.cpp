@@ -20,6 +20,7 @@
 #include <xrpld/app/misc/LoadFeeTrack.h>
 #include <xrpld/core/Config.h>
 #include <xrpld/ledger/ReadView.h>
+
 #include <xrpl/beast/unit_test.h>
 
 namespace ripple {
@@ -86,6 +87,6 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(LoadFeeTrack, ripple_core, ripple);
+BEAST_DEFINE_TESTSUITE(LoadFeeTrack, app, ripple);
 
 }  // namespace ripple

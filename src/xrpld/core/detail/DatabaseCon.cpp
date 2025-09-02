@@ -19,6 +19,7 @@
 
 #include <xrpld/core/DatabaseCon.h>
 #include <xrpld/core/SociDB.h>
+
 #include <xrpl/basics/Log.h>
 #include <xrpl/basics/contract.h>
 
@@ -231,7 +232,9 @@ setup_DatabaseCon(Config const& c, std::optional<beast::Journal> j)
                        "nodes storing large amounts of history, because of the "
                        "difficulty inherent in rebuilding corrupted data.";
             }
-            assert(result->size() == 3);
+            XRPL_ASSERT(
+                result->size() == 3,
+                "ripple::setup_DatabaseCon::globalPragma : result size is 3");
             return result;
         }();
     }

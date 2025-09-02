@@ -19,9 +19,10 @@
 
 #include <test/jtx.h>
 #include <test/jtx/WSClient.h>
+
 #include <xrpld/app/misc/NetworkOPs.h>
 #include <xrpld/core/ConfigSections.h>
-#include <xrpl/protocol/ErrorCodes.h>
+
 #include <xrpl/protocol/jss.h>
 
 namespace ripple {
@@ -254,6 +255,6 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(AmendmentBlocked, app, ripple);
+BEAST_DEFINE_TESTSUITE(AmendmentBlocked, rpc, ripple);
 
 }  // namespace ripple

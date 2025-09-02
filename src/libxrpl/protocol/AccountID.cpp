@@ -19,13 +19,21 @@
 
 #include <xrpl/basics/hardened_hash.h>
 #include <xrpl/basics/spinlock.h>
+#include <xrpl/beast/utility/Zero.h>
+#include <xrpl/beast/utility/instrumentation.h>
 #include <xrpl/protocol/AccountID.h>
 #include <xrpl/protocol/PublicKey.h>
 #include <xrpl/protocol/digest.h>
 #include <xrpl/protocol/tokens.h>
-#include <array>
+
+#include <atomic>
+#include <cstdint>
 #include <cstring>
+#include <memory>
 #include <mutex>
+#include <optional>
+#include <string>
+#include <vector>
 
 namespace ripple {
 
@@ -77,7 +85,9 @@ public:
         auto ret =
             encodeBase58Token(TokenType::AccountID, id.data(), id.size());
 
-        assert(ret.size() <= 38);
+        XRPL_ASSERT(
+            ret.size() <= 38,
+            "ripple::detail::AccountIdCache : maximum result size");
 
         {
             std::lock_guard lock(sl);

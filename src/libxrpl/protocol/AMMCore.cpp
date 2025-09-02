@@ -17,26 +17,27 @@
 */
 //==============================================================================
 
+#include <xrpl/basics/base_uint.h>
+#include <xrpl/beast/utility/Zero.h>
+#include <xrpl/beast/utility/instrumentation.h>
 #include <xrpl/protocol/AMMCore.h>
+#include <xrpl/protocol/AccountID.h>
 #include <xrpl/protocol/Feature.h>
+#include <xrpl/protocol/Issue.h>
 #include <xrpl/protocol/Rules.h>
+#include <xrpl/protocol/SField.h>
 #include <xrpl/protocol/STAmount.h>
 #include <xrpl/protocol/STObject.h>
+#include <xrpl/protocol/TER.h>
+#include <xrpl/protocol/UintTypes.h>
 #include <xrpl/protocol/digest.h>
 
-namespace ripple {
+#include <algorithm>
+#include <cstdint>
+#include <optional>
+#include <utility>
 
-AccountID
-ammAccountID(
-    std::uint16_t prefix,
-    uint256 const& parentHash,
-    uint256 const& ammID)
-{
-    ripesha_hasher rsh;
-    auto const hash = sha512Half(prefix, parentHash, ammID);
-    rsh(hash.data(), hash.size());
-    return AccountID{static_cast<ripesha_hasher::result_type>(rsh)};
-}
+namespace ripple {
 
 Currency
 ammLPTCurrency(Currency const& cur1, Currency const& cur2)
@@ -109,7 +110,9 @@ ammAuctionTimeSlot(std::uint64_t current, STObject const& auctionSlot)
     // It should be impossible for expiration to be < TOTAL_TIME_SLOT_SECS,
     // but check just to be safe
     auto const expiration = auctionSlot[sfExpiration];
-    assert(expiration >= TOTAL_TIME_SLOT_SECS);
+    XRPL_ASSERT(
+        expiration >= TOTAL_TIME_SLOT_SECS,
+        "ripple::ammAuctionTimeSlot : minimum expiration");
     if (expiration >= TOTAL_TIME_SLOT_SECS)
     {
         if (auto const start = expiration - TOTAL_TIME_SLOT_SECS;

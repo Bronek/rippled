@@ -54,7 +54,7 @@ public:
     isDefault() const override;
 
     bool
-    isEquivalent(const STBase& t) const override;
+    isEquivalent(STBase const& t) const override;
 
     STInteger&
     operator=(value_type const& v);
@@ -110,8 +110,11 @@ template <typename Integer>
 inline void
 STInteger<Integer>::add(Serializer& s) const
 {
-    assert(getFName().isBinary());
-    assert(getFName().fieldType == getSType());
+    XRPL_ASSERT(
+        getFName().isBinary(), "ripple::STInteger::add : field is binary");
+    XRPL_ASSERT(
+        getFName().fieldType == getSType(),
+        "ripple::STInteger::add : field type match");
     s.addInteger(value_);
 }
 
@@ -124,9 +127,9 @@ STInteger<Integer>::isDefault() const
 
 template <typename Integer>
 inline bool
-STInteger<Integer>::isEquivalent(const STBase& t) const
+STInteger<Integer>::isEquivalent(STBase const& t) const
 {
-    const STInteger* v = dynamic_cast<const STInteger*>(&t);
+    STInteger const* v = dynamic_cast<STInteger const*>(&t);
     return v && (value_ == v->value_);
 }
 

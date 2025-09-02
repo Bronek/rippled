@@ -20,9 +20,11 @@
 #ifndef RIPPLE_PROTOCOL_RATE_H_INCLUDED
 #define RIPPLE_PROTOCOL_RATE_H_INCLUDED
 
+#include <xrpl/beast/utility/instrumentation.h>
 #include <xrpl/protocol/STAmount.h>
+
 #include <boost/operators.hpp>
-#include <cassert>
+
 #include <cstdint>
 #include <ostream>
 
@@ -74,7 +76,7 @@ STAmount
 multiplyRound(
     STAmount const& amount,
     Rate const& rate,
-    Issue const& issue,
+    Asset const& asset,
     bool roundUp);
 
 STAmount
@@ -87,7 +89,7 @@ STAmount
 divideRound(
     STAmount const& amount,
     Rate const& rate,
-    Issue const& issue,
+    Asset const& asset,
     bool roundUp);
 
 namespace nft {

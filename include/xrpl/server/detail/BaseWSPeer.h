@@ -21,17 +21,22 @@
 #define RIPPLE_SERVER_BASEWSPEER_H_INCLUDED
 
 #include <xrpl/basics/safe_cast.h>
+#include <xrpl/beast/utility/instrumentation.h>
 #include <xrpl/beast/utility/rngfill.h>
 #include <xrpl/crypto/csprng.h>
 #include <xrpl/protocol/BuildInfo.h>
+#include <xrpl/server/WSSession.h>
 #include <xrpl/server/detail/BasePeer.h>
 #include <xrpl/server/detail/LowestLayer.h>
+
+#include <boost/asio/error.hpp>
 #include <boost/beast/core/multi_buffer.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/websocket.hpp>
+#include <boost/logic/tribool.hpp>
 
-#include <cassert>
 #include <functional>
+#include <list>
 
 namespace ripple {
 
@@ -416,11 +421,17 @@ BaseWSPeer<Handler, Impl>::start_timer()
     // Max seconds without completing a message
     static constexpr std::chrono::seconds timeout{30};
     static constexpr std::chrono::seconds timeoutLocal{3};
-    error_code ec;
-    timer_.expires_from_now(
-        remote_endpoint().address().is_loopback() ? timeoutLocal : timeout, ec);
-    if (ec)
-        return fail(ec, "start_timer");
+
+    try
+    {
+        timer_.expires_after(
+            remote_endpoint().address().is_loopback() ? timeoutLocal : timeout);
+    }
+    catch (boost::system::system_error const& e)
+    {
+        return fail(e.code(), "start_timer");
+    }
+
     timer_.async_wait(bind_executor(
         strand_,
         std::bind(
@@ -434,8 +445,14 @@ template <class Handler, class Impl>
 void
 BaseWSPeer<Handler, Impl>::cancel_timer()
 {
-    error_code ec;
-    timer_.cancel(ec);
+    try
+    {
+        timer_.cancel();
+    }
+    catch (boost::system::system_error const&)
+    {
+        // ignored
+    }
 }
 
 template <class Handler, class Impl>
@@ -508,7 +525,9 @@ template <class String>
 void
 BaseWSPeer<Handler, Impl>::fail(error_code ec, String const& what)
 {
-    assert(strand_.running_in_this_thread());
+    XRPL_ASSERT(
+        strand_.running_in_this_thread(),
+        "ripple::BaseWSPeer::fail : strand in this thread");
 
     cancel_timer();
     if (!ec_ && ec != boost::asio::error::operation_aborted)

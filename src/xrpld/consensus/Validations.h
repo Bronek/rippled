@@ -21,6 +21,7 @@
 #define RIPPLE_CONSENSUS_VALIDATIONS_H_INCLUDED
 
 #include <xrpld/consensus/LedgerTrie.h>
+
 #include <xrpl/basics/Log.h>
 #include <xrpl/basics/UnorderedContainers.h>
 #include <xrpl/basics/chrono.h>
@@ -434,7 +435,9 @@ private:
         Validation const& val,
         std::optional<std::pair<Seq, ID>> prior)
     {
-        assert(val.trusted());
+        XRPL_ASSERT(
+            val.trusted(),
+            "ripple::Validations::updateTrie : trusted input validation");
 
         // Clear any prior acquiring ledger for this node
         if (prior)
@@ -713,7 +716,8 @@ public:
     setSeqToKeep(Seq const& low, Seq const& high)
     {
         std::lock_guard lock{mutex_};
-        assert(low < high);
+        XRPL_ASSERT(
+            low < high, "ripple::Validations::setSeqToKeep : valid inputs");
         toKeep_ = {low, high};
     }
 

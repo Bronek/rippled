@@ -18,10 +18,18 @@
 //==============================================================================
 
 #include <xrpl/basics/LocalValue.h>
+#include <xrpl/basics/base_uint.h>
+#include <xrpl/basics/hardened_hash.h>
+#include <xrpl/beast/hash/uhash.h>
+#include <xrpl/beast/utility/instrumentation.h>
 #include <xrpl/protocol/Feature.h>
 #include <xrpl/protocol/Rules.h>
+#include <xrpl/protocol/STVector256.h>
 
+#include <memory>
 #include <optional>
+#include <unordered_set>
+#include <utility>
 
 namespace ripple {
 
@@ -91,7 +99,10 @@ public:
             return true;
         if (!digest_ || !other.digest_)
             return false;
-        assert(presets_ == other.presets_);
+        XRPL_ASSERT(
+            presets_ == other.presets_,
+            "ripple::Rules::Impl::operator==(Impl) const : input presets do "
+            "match");
         return *digest_ == *other.digest_;
     }
 };
@@ -118,7 +129,7 @@ Rules::presets() const
 bool
 Rules::enabled(uint256 const& feature) const
 {
-    assert(impl_);
+    XRPL_ASSERT(impl_, "ripple::Rules::enabled : initialized");
 
     // The functionality of the "NonFungibleTokensV1_1" amendment is
     // precisely the functionality of the following three amendments
@@ -137,7 +148,9 @@ Rules::enabled(uint256 const& feature) const
 bool
 Rules::operator==(Rules const& other) const
 {
-    assert(impl_ && other.impl_);
+    XRPL_ASSERT(
+        impl_ && other.impl_,
+        "ripple::Rules::operator==(Rules) const : both initialized");
     if (impl_.get() == other.impl_.get())
         return true;
     return *impl_ == *other.impl_;
@@ -148,4 +161,12 @@ Rules::operator!=(Rules const& other) const
 {
     return !(*this == other);
 }
+
+bool
+isFeatureEnabled(uint256 const& feature)
+{
+    auto const& rules = getCurrentTransactionRules();
+    return rules && rules->enabled(feature);
+}
+
 }  // namespace ripple

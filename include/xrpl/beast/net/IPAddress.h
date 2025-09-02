@@ -24,14 +24,12 @@
 #include <xrpl/beast/hash/uhash.h>
 #include <xrpl/beast/net/IPAddressV4.h>
 #include <xrpl/beast/net/IPAddressV6.h>
+#include <xrpl/beast/utility/instrumentation.h>
+
 #include <boost/asio/ip/address.hpp>
 #include <boost/functional/hash.hpp>
-#include <cassert>
-#include <cstdint>
-#include <ios>
-#include <sstream>
+
 #include <string>
-#include <typeinfo>
 
 //------------------------------------------------------------------------------
 
@@ -96,7 +94,7 @@ hash_append(Hasher& h, beast::IP::Address const& addr) noexcept
     else if (addr.is_v6())
         hash_append(h, addr.to_v6().to_bytes());
     else
-        assert(false);
+        UNREACHABLE("beast::hash_append : invalid address type");
 }
 }  // namespace beast
 

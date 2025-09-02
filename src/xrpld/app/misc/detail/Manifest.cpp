@@ -20,6 +20,7 @@
 #include <xrpld/app/misc/Manifest.h>
 #include <xrpld/app/rdb/Wallet.h>
 #include <xrpld/core/DatabaseCon.h>
+
 #include <xrpl/basics/Log.h>
 #include <xrpl/basics/StringUtilities.h>
 #include <xrpl/basics/base64.h>
@@ -390,7 +391,9 @@ ManifestCache::applyManifest(Manifest m)
     auto prewriteCheck =
         [this, &m](auto const& iter, bool checkSignature, auto const& lock)
         -> std::optional<ManifestDisposition> {
-        assert(lock.owns_lock());
+        XRPL_ASSERT(
+            lock.owns_lock(),
+            "ripple::ManifestCache::applyManifest::prewriteCheck : locked");
         (void)lock;  // not used. parameter is present to ensure the mutex is
                      // locked when the lambda is called.
         if (iter != map_.end() && m.sequence <= iter->second.sequence)

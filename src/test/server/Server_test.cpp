@@ -17,19 +17,21 @@
 */
 //==============================================================================
 
+#include <test/jtx.h>
+#include <test/jtx/CaptureLogs.h>
+#include <test/jtx/envconfig.h>
+#include <test/unit_test/SuiteJournal.h>
+
 #include <xrpld/core/ConfigSections.h>
+
 #include <xrpl/basics/make_SSLContext.h>
 #include <xrpl/beast/rfc2616.h>
 #include <xrpl/beast/unit_test.h>
 #include <xrpl/server/Server.h>
 #include <xrpl/server/Session.h>
 
-#include <test/jtx.h>
-#include <test/jtx/CaptureLogs.h>
-#include <test/jtx/envconfig.h>
-#include <test/unit_test/SuiteJournal.h>
-
 #include <boost/asio.hpp>
+#include <boost/asio/executor_work_guard.hpp>
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/utility/in_place_factory.hpp>
@@ -51,14 +53,16 @@ public:
     class TestThread
     {
     private:
-        boost::asio::io_service io_service_;
-        std::optional<boost::asio::io_service::work> work_;
+        boost::asio::io_context io_context_;
+        std::optional<boost::asio::executor_work_guard<
+            boost::asio::io_context::executor_type>>
+            work_;
         std::thread thread_;
 
     public:
         TestThread()
-            : work_(std::in_place, std::ref(io_service_))
-            , thread_([&]() { this->io_service_.run(); })
+            : work_(std::in_place, boost::asio::make_work_guard(io_context_))
+            , thread_([&]() { this->io_context_.run(); })
         {
         }
 
@@ -68,10 +72,10 @@ public:
             thread_.join();
         }
 
-        boost::asio::io_service&
-        get_io_service()
+        boost::asio::io_context&
+        get_io_context()
         {
-            return io_service_;
+            return io_context_;
         }
     };
 
@@ -94,6 +98,13 @@ public:
             if (level < threshold())
                 return;
 
+            suite_.log << text << std::endl;
+        }
+
+        void
+        writeAlways(beast::severities::Severity level, std::string const& text)
+            override
+        {
             suite_.log << text << std::endl;
         }
     };
@@ -226,7 +237,7 @@ public:
     void
     test_request(boost::asio::ip::tcp::endpoint const& ep)
     {
-        boost::asio::io_service ios;
+        boost::asio::io_context ios;
         using socket = boost::asio::ip::tcp::socket;
         socket s(ios);
 
@@ -252,7 +263,7 @@ public:
     void
     test_keepalive(boost::asio::ip::tcp::endpoint const& ep)
     {
-        boost::asio::io_service ios;
+        boost::asio::io_context ios;
         using socket = boost::asio::ip::tcp::socket;
         socket s(ios);
 
@@ -292,15 +303,15 @@ public:
         sink.threshold(beast::severities::Severity::kAll);
         beast::Journal journal{sink};
         TestHandler handler;
-        auto s = make_Server(handler, thread.get_io_service(), journal);
+        auto s = make_Server(handler, thread.get_io_context(), journal);
         std::vector<Port> serverPort(1);
         serverPort.back().ip =
-            beast::IP::Address::from_string(getEnvLocalhostAddr()),
+            boost::asio::ip::make_address(getEnvLocalhostAddr()),
         serverPort.back().port = 0;
         serverPort.back().protocol.insert("http");
         auto eps = s->ports(serverPort);
-        test_request(eps[0]);
-        test_keepalive(eps[0]);
+        test_request(eps.begin()->second);
+        test_keepalive(eps.begin()->second);
         // s->close();
         s = nullptr;
         pass();
@@ -367,10 +378,10 @@ public:
         for (int i = 0; i < 1000; ++i)
         {
             TestThread thread;
-            auto s = make_Server(h, thread.get_io_service(), journal);
+            auto s = make_Server(h, thread.get_io_context(), journal);
             std::vector<Port> serverPort(1);
             serverPort.back().ip =
-                beast::IP::Address::from_string(getEnvLocalhostAddr()),
+                boost::asio::ip::make_address(getEnvLocalhostAddr()),
             serverPort.back().port = 0;
             serverPort.back().protocol.insert("http");
             s->ports(serverPort);
@@ -423,7 +434,20 @@ public:
                 std::make_unique<CaptureLogs>(&messages)};
         });
         BEAST_EXPECT(
-            messages.find("Invalid value '0' for key 'port' in [port_rpc]") !=
+            messages.find("Invalid value '0' for key 'port' in [port_rpc]") ==
+            std::string::npos);
+
+        except([&] {
+            Env env{
+                *this,
+                envconfig([](std::unique_ptr<Config> cfg) {
+                    (*cfg)["server"].set("port", "0");
+                    return cfg;
+                }),
+                std::make_unique<CaptureLogs>(&messages)};
+        });
+        BEAST_EXPECT(
+            messages.find("Invalid value '0' for key 'port' in [server]") !=
             std::string::npos);
 
         except([&] {
@@ -512,7 +536,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(Server, http, ripple);
+BEAST_DEFINE_TESTSUITE(Server, server, ripple);
 
 }  // namespace test
 }  // namespace ripple

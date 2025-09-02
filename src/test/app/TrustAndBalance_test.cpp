@@ -19,6 +19,7 @@
 
 #include <test/jtx.h>
 #include <test/jtx/WSClient.h>
+
 #include <xrpl/beast/unit_test.h>
 #include <xrpl/protocol/Feature.h>
 #include <xrpl/protocol/SField.h>
@@ -400,7 +401,6 @@ class TrustAndBalance_test : public beast::unit_test::suite
                     carol["USD"].issue(),
                     6500000000000000ull,
                     -14,
-                    false,
                     true,
                     STAmount::unchecked{})));
             env.require(balance(carol, gw["USD"](35)));
@@ -480,8 +480,8 @@ public:
         };
 
         using namespace test::jtx;
-        auto const sa = supported_amendments();
-        testWithFeatures(sa - featureFlowCross);
+        auto const sa = testable_amendments();
+        testWithFeatures(sa - featurePermissionedDEX);
         testWithFeatures(sa);
     }
 };

@@ -18,6 +18,7 @@
 //==============================================================================
 
 #include <test/json/TestOutputSuite.h>
+
 #include <xrpl/json/json_reader.h>
 #include <xrpl/json/json_writer.h>
 
@@ -60,6 +61,6 @@ struct Output_test : ripple::test::TestOutputSuite
     }
 };
 
-BEAST_DEFINE_TESTSUITE(Output, ripple_basics, ripple);
+BEAST_DEFINE_TESTSUITE(Output, json, ripple);
 
 }  // namespace Json

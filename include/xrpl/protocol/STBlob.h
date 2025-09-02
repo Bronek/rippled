@@ -23,11 +23,10 @@
 #include <xrpl/basics/Buffer.h>
 #include <xrpl/basics/CountedObject.h>
 #include <xrpl/basics/Slice.h>
+#include <xrpl/beast/utility/instrumentation.h>
 #include <xrpl/protocol/STBase.h>
 
-#include <cassert>
 #include <cstring>
-#include <memory>
 
 namespace ripple {
 
@@ -63,7 +62,7 @@ public:
     add(Serializer& s) const override;
 
     bool
-    isEquivalent(const STBase& t) const override;
+    isEquivalent(STBase const& t) const override;
 
     bool
     isDefault() const override;

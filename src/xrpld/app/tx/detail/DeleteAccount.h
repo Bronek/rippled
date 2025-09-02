@@ -21,8 +21,6 @@
 #define RIPPLE_TX_DELETEACCOUNT_H_INCLUDED
 
 #include <xrpld/app/tx/detail/Transactor.h>
-#include <xrpl/basics/Log.h>
-#include <xrpl/protocol/Indexes.h>
 
 namespace ripple {
 
@@ -47,6 +45,8 @@ public:
     TER
     doApply() override;
 };
+
+using AccountDelete = DeleteAccount;
 
 }  // namespace ripple
 

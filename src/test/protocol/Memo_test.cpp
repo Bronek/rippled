@@ -18,8 +18,8 @@
 //==============================================================================
 
 #include <test/jtx.h>
+
 #include <xrpl/basics/strHex.h>
-#include <xrpl/protocol/jss.h>
 
 namespace ripple {
 
@@ -135,6 +135,6 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(Memo, ripple_data, ripple);
+BEAST_DEFINE_TESTSUITE(Memo, protocol, ripple);
 
 }  // namespace ripple

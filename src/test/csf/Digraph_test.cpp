@@ -18,7 +18,9 @@
 //==============================================================================
 
 #include <test/csf/Digraph.h>
+
 #include <xrpl/beast/unit_test.h>
+
 #include <string>
 #include <vector>
 
@@ -90,7 +92,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(Digraph, test, ripple);
+BEAST_DEFINE_TESTSUITE(Digraph, csf, ripple);
 
 }  // namespace test
 }  // namespace ripple

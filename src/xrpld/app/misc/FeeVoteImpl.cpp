@@ -18,9 +18,8 @@
 //==============================================================================
 
 #include <xrpld/app/ledger/Ledger.h>
-#include <xrpld/app/main/Application.h>
 #include <xrpld/app/misc/FeeVote.h>
-#include <xrpl/basics/BasicConfig.h>
+
 #include <xrpl/beast/utility/Journal.h>
 #include <xrpl/protocol/STValidation.h>
 #include <xrpl/protocol/st.h>
@@ -131,7 +130,7 @@ FeeVoteImpl::doValidation(
         auto vote = [&v, this](
                         auto const current,
                         XRPAmount target,
-                        const char* name,
+                        char const* name,
                         auto const& sfield) {
             if (current != target)
             {
@@ -165,7 +164,7 @@ FeeVoteImpl::doValidation(
                         auto const current,
                         XRPAmount target,
                         auto const& convertCallback,
-                        const char* name,
+                        char const* name,
                         auto const& sfield) {
             if (current != target)
             {
@@ -200,7 +199,9 @@ FeeVoteImpl::doVoting(
     std::shared_ptr<SHAMap> const& initialPosition)
 {
     // LCL must be flag ledger
-    assert(lastClosedLedger && isFlagLedger(lastClosedLedger->seq()));
+    XRPL_ASSERT(
+        lastClosedLedger && isFlagLedger(lastClosedLedger->seq()),
+        "ripple::FeeVoteImpl::doVoting : has a flag ledger");
 
     detail::VotableValue baseFeeVote(
         lastClosedLedger->fees().base, target_.reference_fee);

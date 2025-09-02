@@ -18,6 +18,7 @@
 //==============================================================================
 
 #include <xrpld/app/ledger/AcceptedLedgerTx.h>
+
 #include <xrpl/basics/Log.h>
 #include <xrpl/basics/StringUtilities.h>
 #include <xrpl/protocol/UintTypes.h>
@@ -33,7 +34,9 @@ AcceptedLedgerTx::AcceptedLedgerTx(
     , mMeta(txn->getTransactionID(), ledger->seq(), *met)
     , mAffected(mMeta.getAffectedAccounts())
 {
-    assert(!ledger->open());
+    XRPL_ASSERT(
+        !ledger->open(),
+        "ripple::AcceptedLedgerTx::AcceptedLedgerTx : valid ledger state");
 
     Serializer s;
     met->add(s);
@@ -76,7 +79,9 @@ AcceptedLedgerTx::AcceptedLedgerTx(
 std::string
 AcceptedLedgerTx::getEscMeta() const
 {
-    assert(!mRawMeta.empty());
+    XRPL_ASSERT(
+        !mRawMeta.empty(),
+        "ripple::AcceptedLedgerTx::getEscMeta : metadata is set");
     return sqlBlobLiteral(mRawMeta);
 }
 

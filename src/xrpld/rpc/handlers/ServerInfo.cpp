@@ -17,14 +17,13 @@
 */
 //==============================================================================
 
-#include <xrpld/app/main/Application.h>
 #include <xrpld/app/misc/NetworkOPs.h>
 #include <xrpld/rpc/Context.h>
 #include <xrpld/rpc/Role.h>
+
 #include <xrpl/json/json_value.h>
 #include <xrpl/json/json_writer.h>
 #include <xrpl/protocol/LedgerFormats.h>
-#include <xrpl/protocol/RPCErr.h>
 #include <xrpl/protocol/SField.h>
 #include <xrpl/protocol/TER.h>
 #include <xrpl/protocol/TxFormats.h>
@@ -80,7 +79,8 @@ ServerDefinitions::translate(std::string const& inp)
 
     if (contains("UINT"))
     {
-        if (contains("256") || contains("160") || contains("128"))
+        if (contains("512") || contains("384") || contains("256") ||
+            contains("192") || contains("160") || contains("128"))
             return replace("UINT", "Hash");
         else
             return replace("UINT", "UInt");
@@ -287,7 +287,7 @@ ServerDefinitions::ServerDefinitions() : defs_{Json::objectValue}
 
     // generate hash
     {
-        const std::string out = Json::FastWriter().write(defs_);
+        std::string const out = Json::FastWriter().write(defs_);
         defsHash_ = ripple::sha512Half(ripple::Slice{out.data(), out.size()});
         defs_[jss::hash] = to_string(defsHash_);
     }
@@ -308,7 +308,7 @@ doServerDefinitions(RPC::JsonContext& context)
             return RPC::invalid_field_error(jss::hash);
     }
 
-    static const detail::ServerDefinitions defs{};
+    static detail::ServerDefinitions const defs{};
     if (defs.hashMatches(hash))
     {
         Json::Value jv = Json::objectValue;

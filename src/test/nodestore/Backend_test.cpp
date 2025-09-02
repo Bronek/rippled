@@ -19,10 +19,14 @@
 
 #include <test/nodestore/TestBase.h>
 #include <test/unit_test/SuiteJournal.h>
+
 #include <xrpld/nodestore/DummyScheduler.h>
 #include <xrpld/nodestore/Manager.h>
 #include <xrpld/unity/rocksdb.h>
+
+#include <xrpl/basics/ByteUtilities.h>
 #include <xrpl/beast/utility/temp_dir.h>
+
 #include <algorithm>
 
 namespace ripple {
@@ -117,7 +121,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(Backend, ripple_core, ripple);
+BEAST_DEFINE_TESTSUITE(Backend, nodestore, ripple);
 
 }  // namespace NodeStore
 }  // namespace ripple

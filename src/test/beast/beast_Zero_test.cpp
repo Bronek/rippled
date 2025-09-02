@@ -17,9 +17,8 @@
 */
 //==============================================================================
 
-#include <xrpl/beast/utility/Zero.h>
-
 #include <xrpl/beast/unit_test.h>
+#include <xrpl/beast/utility/Zero.h>
 
 namespace beast {
 
@@ -130,6 +129,6 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(Zero, types, beast);
+BEAST_DEFINE_TESTSUITE(Zero, beast, beast);
 
 }  // namespace beast

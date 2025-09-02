@@ -20,12 +20,9 @@
 #ifndef RIPPLE_PROTOCOL_ISSUE_H_INCLUDED
 #define RIPPLE_PROTOCOL_ISSUE_H_INCLUDED
 
+#include <xrpl/beast/utility/instrumentation.h>
 #include <xrpl/json/json_value.h>
 #include <xrpl/protocol/UintTypes.h>
-
-#include <cassert>
-#include <functional>
-#include <type_traits>
 
 namespace ripple {
 
@@ -38,16 +35,29 @@ public:
     Currency currency{};
     AccountID account{};
 
-    Issue()
-    {
-    }
+    Issue() = default;
 
     Issue(Currency const& c, AccountID const& a) : currency(c), account(a)
     {
     }
 
+    AccountID const&
+    getIssuer() const
+    {
+        return account;
+    }
+
     std::string
     getText() const;
+
+    void
+    setJson(Json::Value& jv) const;
+
+    bool
+    native() const;
+
+    friend constexpr std::weak_ordering
+    operator<=>(Issue const& lhs, Issue const& rhs);
 };
 
 bool
@@ -85,7 +95,7 @@ operator==(Issue const& lhs, Issue const& rhs)
 
 /** Strict weak ordering. */
 /** @{ */
-[[nodiscard]] inline constexpr std::weak_ordering
+[[nodiscard]] constexpr std::weak_ordering
 operator<=>(Issue const& lhs, Issue const& rhs)
 {
     if (auto const c{lhs.currency <=> rhs.currency}; c != 0)
@@ -114,6 +124,12 @@ noIssue()
 {
     static Issue issue{noCurrency(), noAccount()};
     return issue;
+}
+
+inline bool
+isXRP(Issue const& issue)
+{
+    return issue.native();
 }
 
 }  // namespace ripple

@@ -22,13 +22,13 @@
 
 #include <xrpld/app/consensus/RCLCxPeerPos.h>
 #include <xrpld/app/ledger/detail/LedgerReplayMsgHandler.h>
+#include <xrpld/app/misc/HashRouter.h>
 #include <xrpld/overlay/Squelch.h>
 #include <xrpld/overlay/detail/OverlayImpl.h>
-#include <xrpld/overlay/detail/ProtocolMessage.h>
 #include <xrpld/overlay/detail/ProtocolVersion.h>
 #include <xrpld/peerfinder/PeerfinderManager.h>
+
 #include <xrpl/basics/Log.h>
-#include <xrpl/basics/RangeSet.h>
 #include <xrpl/basics/UnorderedContainers.h>
 #include <xrpl/beast/utility/WrappedSink.h>
 #include <xrpl/protocol/Protocol.h>
@@ -39,6 +39,7 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/endian/conversion.hpp>
 #include <boost/thread/shared_mutex.hpp>
+
 #include <cstdint>
 #include <optional>
 #include <queue>
@@ -98,7 +99,7 @@ private:
     // Node public key of peer.
     PublicKey const publicKey_;
     std::string name_;
-    boost::shared_mutex mutable nameMutex_;
+    std::shared_mutex mutable nameMutex_;
 
     // The indices of the smallest and largest ledgers this peer has available
     //
@@ -116,7 +117,6 @@ private:
     clock_type::time_point const creationTime_;
 
     reduce_relay::Squelch<UptimeClock> squelch_;
-    inline static std::atomic_bool reduceRelayReady_{false};
 
     // Notes on thread locking:
     //
@@ -145,10 +145,30 @@ private:
     //
     // June 2019
 
+    struct ChargeWithContext
+    {
+        Resource::Charge fee = Resource::feeTrivialPeer;
+        std::string context = {};
+
+        void
+        update(Resource::Charge f, std::string const& add)
+        {
+            XRPL_ASSERT(
+                f >= fee,
+                "ripple::PeerImp::ChargeWithContext::update : fee increases");
+            fee = f;
+            if (!context.empty())
+            {
+                context += " ";
+            }
+            context += add;
+        }
+    };
+
     std::mutex mutable recentLock_;
     protocol::TMStatusChange last_status_;
     Resource::Consumer usage_;
-    Resource::Charge fee_;
+    ChargeWithContext fee_;
     std::shared_ptr<PeerFinder::Slot> const slot_;
     boost::beast::multi_buffer read_buffer_;
     http_request_type request_;
@@ -170,9 +190,7 @@ private:
     hash_set<uint256> txQueue_;
     // true if tx reduce-relay feature is enabled on the peer.
     bool txReduceRelayEnabled_ = false;
-    // true if validation/proposal reduce-relay feature is enabled
-    // on the peer.
-    bool vpReduceRelayEnabled_ = false;
+
     bool ledgerReplayEnabled_ = false;
     LedgerReplayMsgHandler ledgerReplayMsgHandler_;
 
@@ -197,7 +215,7 @@ private:
         total_bytes() const;
 
     private:
-        boost::shared_mutex mutable mutex_;
+        std::shared_mutex mutable mutex_;
         boost::circular_buffer<std::uint64_t> rollingAvg_{30, 0ull};
         clock_type::time_point intervalStart_{clock_type::now()};
         std::uint64_t totalBytes_{0};
@@ -304,7 +322,7 @@ public:
     }
 
     void
-    charge(Resource::Charge const& fee) override;
+    charge(Resource::Charge const& fee, std::string const& context) override;
 
     //
     // Identity
@@ -482,11 +500,15 @@ private:
        the queue when called from onMessage(TMTransactions) because this
        message is a response to the missing transactions request and the queue
        would not have any of these transactions.
+       @param batch is false when called from onMessage(TMTransaction)
+       and is true when called from onMessage(TMTransactions). If true, then the
+       transaction is part of a batch, and should not be charged an extra fee.
      */
     void
     handleTransaction(
         std::shared_ptr<protocol::TMTransaction> const& m,
-        bool eraseTxQueue);
+        bool eraseTxQueue,
+        bool batch);
 
     /** Handle protocol message with hashes of transactions that have not
        been relayed by an upstream node down to its peers - request
@@ -496,11 +518,6 @@ private:
     void
     handleHaveTransactions(
         std::shared_ptr<protocol::TMHaveTransactions> const& m);
-
-    // Check if reduce-relay feature is enabled and
-    // reduce_relay::WAIT_ON_BOOTUP time passed since the start
-    bool
-    reduceRelayReady();
 
 public:
     //--------------------------------------------------------------------------
@@ -578,7 +595,7 @@ private:
         std::lock_guard<std::mutex> const& lockedRecentLock);
 
     void
-    doFetchPack(const std::shared_ptr<protocol::TMGetObjectByHash>& packet);
+    doFetchPack(std::shared_ptr<protocol::TMGetObjectByHash> const& packet);
 
     void
     onValidatorListMessage(
@@ -596,9 +613,10 @@ private:
 
     void
     checkTransaction(
-        int flags,
+        HashRouterFlags flags,
         bool checkSignature,
-        std::shared_ptr<STTx const> const& stx);
+        std::shared_ptr<STTx const> const& stx,
+        bool batch);
 
     void
     checkPropose(
@@ -651,7 +669,7 @@ PeerImp::PeerImp(
     , stream_ptr_(std::move(stream_ptr))
     , socket_(stream_ptr_->next_layer().socket())
     , stream_(*stream_ptr_)
-    , strand_(socket_.get_executor())
+    , strand_(boost::asio::make_strand(socket_.get_executor()))
     , timer_(waitable_timer{socket_.get_executor()})
     , remote_address_(slot->remote_endpoint())
     , overlay_(overlay)
@@ -664,7 +682,7 @@ PeerImp::PeerImp(
     , creationTime_(clock_type::now())
     , squelch_(app_.journal("Squelch"))
     , usage_(usage)
-    , fee_(Resource::feeLightPeer)
+    , fee_{Resource::feeTrivialPeer}
     , slot_(std::move(slot))
     , response_(std::move(response))
     , headers_(response_)
@@ -680,10 +698,6 @@ PeerImp::PeerImp(
           headers_,
           FEATURE_TXRR,
           app_.config().TX_REDUCE_RELAY_ENABLE))
-    , vpReduceRelayEnabled_(peerFeatureEnabled(
-          headers_,
-          FEATURE_VPRR,
-          app_.config().VP_REDUCE_RELAY_ENABLE))
     , ledgerReplayEnabled_(peerFeatureEnabled(
           headers_,
           FEATURE_LEDGER_REPLAY,
@@ -692,13 +706,15 @@ PeerImp::PeerImp(
 {
     read_buffer_.commit(boost::asio::buffer_copy(
         read_buffer_.prepare(boost::asio::buffer_size(buffers)), buffers));
-    JLOG(journal_.info()) << "compression enabled "
-                          << (compressionEnabled_ == Compressed::On)
-                          << " vp reduce-relay enabled "
-                          << vpReduceRelayEnabled_
-                          << " tx reduce-relay enabled "
-                          << txReduceRelayEnabled_ << " on " << remote_address_
-                          << " " << id_;
+    JLOG(journal_.info())
+        << "compression enabled " << (compressionEnabled_ == Compressed::On)
+        << " vp reduce-relay base squelch enabled "
+        << peerFeatureEnabled(
+               headers_,
+               FEATURE_VPRR,
+               app_.config().VP_REDUCE_RELAY_BASE_SQUELCH_ENABLE)
+        << " tx reduce-relay enabled " << txReduceRelayEnabled_ << " on "
+        << remote_address_ << " " << id_;
 }
 
 template <class FwdIt, class>

@@ -20,13 +20,13 @@
 #include <xrpld/unity/rocksdb.h>
 
 #if RIPPLE_ROCKSDB_AVAILABLE
-
 #include <xrpld/core/Config.h>  // VFALCO Bad dependency
 #include <xrpld/nodestore/Factory.h>
 #include <xrpld/nodestore/Manager.h>
 #include <xrpld/nodestore/detail/BatchWriter.h>
 #include <xrpld/nodestore/detail/DecodedBlob.h>
 #include <xrpld/nodestore/detail/EncodedBlob.h>
+
 #include <xrpl/basics/ByteUtilities.h>
 #include <xrpl/basics/contract.h>
 #include <xrpl/basics/safe_cast.h>
@@ -191,8 +191,12 @@ public:
 
         if (keyValues.exists("bbt_options"))
         {
+            rocksdb::ConfigOptions config_options;
             auto const s = rocksdb::GetBlockBasedTableOptionsFromString(
-                table_options, get(keyValues, "bbt_options"), &table_options);
+                config_options,
+                table_options,
+                get(keyValues, "bbt_options"),
+                &table_options);
             if (!s.ok())
                 Throw<std::runtime_error>(
                     std::string("Unable to set RocksDB bbt_options: ") +
@@ -228,7 +232,9 @@ public:
     {
         if (m_db)
         {
-            assert(false);
+            UNREACHABLE(
+                "ripple::NodeStore::RocksDBBackend::open : database is already "
+                "open");
             JLOG(m_journal.error()) << "database is already open";
             return;
         }
@@ -273,7 +279,9 @@ public:
     Status
     fetch(void const* key, std::shared_ptr<NodeObject>* pObject) override
     {
-        assert(m_db);
+        XRPL_ASSERT(
+            m_db,
+            "ripple::NodeStore::RocksDBBackend::fetch : non-null database");
         pObject->reset();
 
         Status status(ok);
@@ -349,7 +357,10 @@ public:
     void
     storeBatch(Batch const& batch) override
     {
-        assert(m_db);
+        XRPL_ASSERT(
+            m_db,
+            "ripple::NodeStore::RocksDBBackend::storeBatch : non-null "
+            "database");
         rocksdb::WriteBatch wb;
 
         for (auto const& e : batch)
@@ -381,7 +392,9 @@ public:
     void
     for_each(std::function<void(std::shared_ptr<NodeObject>)> f) override
     {
-        assert(m_db);
+        XRPL_ASSERT(
+            m_db,
+            "ripple::NodeStore::RocksDBBackend::for_each : non-null database");
         rocksdb::ReadOptions const options;
 
         std::unique_ptr<rocksdb::Iterator> it(m_db->NewIterator(options));

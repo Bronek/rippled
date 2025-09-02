@@ -16,15 +16,35 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    # GCC-specific fixes
+    add_compile_options(-Wno-unknown-pragmas -Wno-subobject-linkage)
+    # -Wno-subobject-linkage can be removed when we upgrade GCC version to at least 13.3
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Clang-specific fixes
+    add_compile_options(-Wno-unknown-warning-option) # Ignore unknown warning options
+elseif(MSVC)
+    # MSVC-specific fixes
+    add_compile_options(/wd4068) # Ignore unknown pragmas
+endif()
+
 # make GIT_COMMIT_HASH define available to all sources
 find_package(Git)
 if(Git_FOUND)
-    execute_process(COMMAND ${GIT_EXECUTABLE} --git-dir=${CMAKE_CURRENT_SOURCE_DIR}/.git describe --always --abbrev=40
+    execute_process(COMMAND ${GIT_EXECUTABLE} --git-dir=${CMAKE_CURRENT_SOURCE_DIR}/.git rev-parse HEAD
         OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE gch)
     if(gch)
         set(GIT_COMMIT_HASH "${gch}")
         message(STATUS gch: ${GIT_COMMIT_HASH})
         add_definitions(-DGIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
+    endif()
+
+    execute_process(COMMAND ${GIT_EXECUTABLE} --git-dir=${CMAKE_CURRENT_SOURCE_DIR}/.git rev-parse --abbrev-ref HEAD
+        OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE gb)
+    if(gb)
+        set(GIT_BRANCH "${gb}")
+        message(STATUS gb: ${GIT_BRANCH})
+        add_definitions(-DGIT_BRANCH="${GIT_BRANCH}")
     endif()
 endif() #git
 
@@ -70,9 +90,15 @@ set_target_properties(OpenSSL::SSL PROPERTIES
   INTERFACE_COMPILE_DEFINITIONS OPENSSL_NO_SSL2
 )
 set(SECP256K1_INSTALL TRUE)
+set(SECP256K1_BUILD_BENCHMARK FALSE)
+set(SECP256K1_BUILD_TESTS FALSE)
+set(SECP256K1_BUILD_EXHAUSTIVE_TESTS FALSE)
+set(SECP256K1_BUILD_CTIME_TESTS FALSE)
+set(SECP256K1_BUILD_EXAMPLES FALSE)
 add_subdirectory(external/secp256k1)
 add_library(secp256k1::secp256k1 ALIAS secp256k1)
 add_subdirectory(external/ed25519-donna)
+add_subdirectory(external/antithesis-sdk)
 find_package(gRPC REQUIRED)
 find_package(lz4 REQUIRED)
 # Target names with :: are not allowed in a generator expression.
@@ -123,3 +149,8 @@ set(PROJECT_EXPORT_SET RippleExports)
 include(RippledCore)
 include(RippledInstall)
 include(RippledValidatorKeys)
+
+if(tests)
+  include(CTest)
+  add_subdirectory(src/tests/libxrpl)
+endif()

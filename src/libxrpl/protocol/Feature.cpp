@@ -17,17 +17,26 @@
 */
 //==============================================================================
 
-#include <xrpl/protocol/Feature.h>
-
 #include <xrpl/basics/Slice.h>
+#include <xrpl/basics/base_uint.h>
 #include <xrpl/basics/contract.h>
+#include <xrpl/beast/utility/instrumentation.h>
+#include <xrpl/protocol/Feature.h>
 #include <xrpl/protocol/digest.h>
+
 #include <boost/container_hash/hash.hpp>
 #include <boost/multi_index/hashed_index.hpp>
-#include <boost/multi_index/key_extractors.hpp>
+#include <boost/multi_index/indexed_by.hpp>
+#include <boost/multi_index/member.hpp>
 #include <boost/multi_index/random_access_index.hpp>
+#include <boost/multi_index/tag.hpp>
 #include <boost/multi_index_container.hpp>
-#include <cstring>
+
+#include <atomic>
+#include <cstddef>
+#include <map>
+#include <optional>
+#include <string>
 
 namespace ripple {
 
@@ -130,27 +139,27 @@ class FeatureCollections
     {
         if (i >= features.size())
             LogicError("Invalid FeatureBitset index");
-        const auto& sequence = features.get<Feature::byIndex>();
+        auto const& sequence = features.get<Feature::byIndex>();
         return sequence[i];
     }
     size_t
     getIndex(Feature const& feature) const
     {
-        const auto& sequence = features.get<Feature::byIndex>();
+        auto const& sequence = features.get<Feature::byIndex>();
         auto const it_to = sequence.iterator_to(feature);
         return it_to - sequence.begin();
     }
     Feature const*
     getByFeature(uint256 const& feature) const
     {
-        const auto& feature_index = features.get<Feature::byFeature>();
+        auto const& feature_index = features.get<Feature::byFeature>();
         auto const feature_it = feature_index.find(feature);
         return feature_it == feature_index.end() ? nullptr : &*feature_it;
     }
     Feature const*
     getByName(std::string const& name) const
     {
-        const auto& name_index = features.get<Feature::byName>();
+        auto const& name_index = features.get<Feature::byName>();
         auto const name_it = name_index.find(name);
         return name_it == name_index.end() ? nullptr : &*name_it;
     }
@@ -221,7 +230,9 @@ FeatureCollections::FeatureCollections()
 std::optional<uint256>
 FeatureCollections::getRegisteredFeature(std::string const& name) const
 {
-    assert(readOnly);
+    XRPL_ASSERT(
+        readOnly.load(),
+        "ripple::FeatureCollections::getRegisteredFeature : startup completed");
     Feature const* feature = getByName(name);
     if (feature)
         return feature->feature;
@@ -229,7 +240,7 @@ FeatureCollections::getRegisteredFeature(std::string const& name) const
 }
 
 void
-check(bool condition, const char* logicErrorMessage)
+check(bool condition, char const* logicErrorMessage)
 {
     if (!condition)
         LogicError(logicErrorMessage);
@@ -248,12 +259,9 @@ FeatureCollections::registerFeature(
     Feature const* i = getByName(name);
     if (!i)
     {
-        // If this check fails, and you just added a feature, increase the
-        // numFeatures value in Feature.h
         check(
             features.size() < detail::numFeatures,
-            "More features defined than allocated. Adjust numFeatures in "
-            "Feature.h.");
+            "More features defined than allocated.");
 
         auto const f = sha512Half(Slice(name.data(), name.size()));
 
@@ -303,7 +311,9 @@ FeatureCollections::registrationIsDone()
 size_t
 FeatureCollections::featureToBitsetIndex(uint256 const& f) const
 {
-    assert(readOnly);
+    XRPL_ASSERT(
+        readOnly.load(),
+        "ripple::FeatureCollections::featureToBitsetIndex : startup completed");
 
     Feature const* feature = getByFeature(f);
     if (!feature)
@@ -315,7 +325,9 @@ FeatureCollections::featureToBitsetIndex(uint256 const& f) const
 uint256 const&
 FeatureCollections::bitsetIndexToFeature(size_t i) const
 {
-    assert(readOnly);
+    XRPL_ASSERT(
+        readOnly.load(),
+        "ripple::FeatureCollections::bitsetIndexToFeature : startup completed");
     Feature const& feature = getByIndex(i);
     return feature.feature;
 }
@@ -323,7 +335,9 @@ FeatureCollections::bitsetIndexToFeature(size_t i) const
 std::string
 FeatureCollections::featureToName(uint256 const& f) const
 {
-    assert(readOnly);
+    XRPL_ASSERT(
+        readOnly.load(),
+        "ripple::FeatureCollections::featureToName : startup completed");
     Feature const* feature = getByFeature(f);
     return feature ? feature->name : to_string(f);
 }
@@ -409,151 +423,43 @@ featureToName(uint256 const& f)
     return featureCollections.featureToName(f);
 }
 
-#pragma push_macro("REGISTER_FEATURE")
-#undef REGISTER_FEATURE
-
-/**
-Takes the name of a feature, whether it's supported, and the default vote. Will
-register the feature, and create a variable whose name is "feature" plus the
-feature name.
-*/
-#define REGISTER_FEATURE(fName, supported, votebehavior) \
-    uint256 const feature##fName =                       \
-        registerFeature(#fName, supported, votebehavior)
-
-#pragma push_macro("REGISTER_FIX")
-#undef REGISTER_FIX
-
-/**
-Takes the name of a feature, whether it's supported, and the default vote. Will
-register the feature, and create a variable whose name is the unmodified feature
-name.
-*/
-#define REGISTER_FIX(fName, supported, votebehavior) \
-    uint256 const fName = registerFeature(#fName, supported, votebehavior)
-
-// clang-format off
-
 // All known amendments must be registered either here or below with the
 // "retired" amendments
-REGISTER_FEATURE(OwnerPaysFee,                  Supported::no,  VoteBehavior::DefaultNo);
-REGISTER_FEATURE(Flow,                          Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(FlowCross,                     Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FIX    (fix1513,                       Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(DepositAuth,                   Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(Checks,                        Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FIX    (fix1571,                       Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FIX    (fix1543,                       Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FIX    (fix1623,                       Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(DepositPreauth,                Supported::yes, VoteBehavior::DefaultYes);
-// Use liquidity from strands that consume max offers, but mark as dry
-REGISTER_FIX    (fix1515,                       Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FIX    (fix1578,                       Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(MultiSignReserve,              Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FIX    (fixTakerDryOfferRemoval,       Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FIX    (fixMasterKeyAsRegularKey,      Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FIX    (fixCheckThreading,             Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FIX    (fixPayChanRecipientOwnerDir,   Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(DeletableAccounts,             Supported::yes, VoteBehavior::DefaultYes);
-// fixQualityUpperBound should be activated before FlowCross
-REGISTER_FIX    (fixQualityUpperBound,          Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(RequireFullyCanonicalSig,      Supported::yes, VoteBehavior::DefaultYes);
-// fix1781: XRPEndpointSteps should be included in the circular payment check
-REGISTER_FIX    (fix1781,                       Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(HardenedValidations,           Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FIX    (fixAmendmentMajorityCalc,      Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(NegativeUNL,                   Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(TicketBatch,                   Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(FlowSortStrands,               Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FIX    (fixSTAmountCanonicalize,       Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FIX    (fixRmSmallIncreasedQOffers,    Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(CheckCashMakesTrustLine,       Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FEATURE(ExpandedSignerList,            Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FEATURE(NonFungibleTokensV1_1,         Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixTrustLinesToSelf,           Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixRemoveNFTokenAutoTrustLine, Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(ImmediateOfferKilled,          Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FEATURE(DisallowIncoming,              Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FEATURE(XRPFees,                       Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixUniversalNumber,            Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixNonFungibleTokensV1_2,      Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixNFTokenRemint,              Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixReducedOffersV1,            Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FEATURE(Clawback,                      Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FEATURE(AMM,                           Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FEATURE(XChainBridge,                  Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixDisallowIncomingV1,         Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FEATURE(DID,                           Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixFillOrKill,                 Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixNFTokenReserve,             Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixInnerObjTemplate,           Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixAMMOverflowOffer,           Supported::yes, VoteBehavior::DefaultYes);
-REGISTER_FEATURE(PriceOracle,                   Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixEmptyDID,                   Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixXChainRewardRounding,       Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixPreviousTxnID,              Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixAMMv1_1,                    Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FEATURE(NFTokenMintOffer,              Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixReducedOffersV2,            Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixEnforceNFTokenTrustline,    Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixInnerObjTemplate2,          Supported::yes, VoteBehavior::DefaultNo);
-REGISTER_FIX    (fixNFTokenPageLinks,           Supported::yes, VoteBehavior::DefaultNo);
-// InvariantsV1_1 will be changes to Supported::yes when all the
-// invariants expected to be included under it are complete.
-REGISTER_FEATURE(InvariantsV1_1,                Supported::no, VoteBehavior::DefaultNo);
 
-// The following amendments are obsolete, but must remain supported
-// because they could potentially get enabled.
-//
-// Obsolete features are (usually) not in the ledger, and may have code
-// controlled by the feature. They need to be supported because at some
-// time in the past, the feature was supported and votable, but never
-// passed. So the feature needs to be supported in case it is ever
-// enabled (added to the ledger).
-//
-// If a feature remains obsolete for long enough that no clients are able
-// to vote for it, the feature can be removed (entirely?) from the code.
-REGISTER_FEATURE(CryptoConditionsSuite, Supported::yes, VoteBehavior::Obsolete);
-REGISTER_FEATURE(NonFungibleTokensV1,   Supported::yes, VoteBehavior::Obsolete);
-REGISTER_FIX    (fixNFTokenDirV1,       Supported::yes, VoteBehavior::Obsolete);
-REGISTER_FIX    (fixNFTokenNegOffer,    Supported::yes, VoteBehavior::Obsolete);
+#pragma push_macro("XRPL_FEATURE")
+#undef XRPL_FEATURE
+#pragma push_macro("XRPL_FIX")
+#undef XRPL_FIX
+#pragma push_macro("XRPL_RETIRE")
+#undef XRPL_RETIRE
 
-// The following amendments have been active for at least two years. Their
-// pre-amendment code has been removed and the identifiers are deprecated.
-// All known amendments and amendments that may appear in a validated
-// ledger must be registered either here or above with the "active" amendments
-[[deprecated("The referenced amendment has been retired"), maybe_unused]]
-uint256 const
-    retiredMultiSign         = retireFeature("MultiSign"),
-    retiredTrustSetAuth      = retireFeature("TrustSetAuth"),
-    retiredFeeEscalation     = retireFeature("FeeEscalation"),
-    retiredPayChan           = retireFeature("PayChan"),
-    retiredCryptoConditions  = retireFeature("CryptoConditions"),
-    retiredTickSize          = retireFeature("TickSize"),
-    retiredFix1368           = retireFeature("fix1368"),
-    retiredEscrow            = retireFeature("Escrow"),
-    retiredFix1373           = retireFeature("fix1373"),
-    retiredEnforceInvariants = retireFeature("EnforceInvariants"),
-    retiredSortedDirectories = retireFeature("SortedDirectories"),
-    retiredFix1201           = retireFeature("fix1201"),
-    retiredFix1512           = retireFeature("fix1512"),
-    retiredFix1523           = retireFeature("fix1523"),
-    retiredFix1528           = retireFeature("fix1528");
+#define XRPL_FEATURE(name, supported, vote) \
+    uint256 const feature##name = registerFeature(#name, supported, vote);
+#define XRPL_FIX(name, supported, vote) \
+    uint256 const fix##name = registerFeature("fix" #name, supported, vote);
 
+// clang-format off
+#define XRPL_RETIRE(name)                                       \
+    [[deprecated("The referenced amendment has been retired")]] \
+    [[maybe_unused]]                                            \
+    uint256 const retired##name = retireFeature(#name);
 // clang-format on
 
-#undef REGISTER_FIX
-#pragma pop_macro("REGISTER_FIX")
+#include <xrpl/protocol/detail/features.macro>
 
-#undef REGISTER_FEATURE
-#pragma pop_macro("REGISTER_FEATURE")
+#undef XRPL_RETIRE
+#pragma pop_macro("XRPL_RETIRE")
+#undef XRPL_FIX
+#pragma pop_macro("XRPL_FIX")
+#undef XRPL_FEATURE
+#pragma pop_macro("XRPL_FEATURE")
 
 // All of the features should now be registered, since variables in a cpp file
 // are initialized from top to bottom.
 //
 // Use initialization of one final static variable to set
 // featureCollections::readOnly.
-[[maybe_unused]] static const bool readOnlySet =
+[[maybe_unused]] static bool const readOnlySet =
     featureCollections.registrationIsDone();
 
 }  // namespace ripple

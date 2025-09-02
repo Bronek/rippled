@@ -19,7 +19,9 @@
 
 #include <test/csf/BasicNetwork.h>
 #include <test/csf/Scheduler.h>
+
 #include <xrpl/beast/unit_test.h>
+
 #include <set>
 #include <vector>
 
@@ -144,7 +146,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(BasicNetwork, test, ripple);
+BEAST_DEFINE_TESTSUITE(BasicNetwork, csf, ripple);
 
 }  // namespace test
 }  // namespace ripple

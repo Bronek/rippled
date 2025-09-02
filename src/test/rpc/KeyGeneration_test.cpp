@@ -16,9 +16,12 @@
     OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 //==============================================================================
+
 #include <test/jtx/TestSuite.h>
+
 #include <xrpld/rpc/detail/RPCHelpers.h>
 #include <xrpld/rpc/handlers/WalletPropose.h>
+
 #include <xrpl/json/json_value.h>
 #include <xrpl/json/json_writer.h>
 #include <xrpl/protocol/ErrorCodes.h>
@@ -891,7 +894,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(WalletPropose, ripple_basics, ripple);
+BEAST_DEFINE_TESTSUITE(WalletPropose, rpc, ripple);
 
 }  // namespace RPC
 }  // namespace ripple

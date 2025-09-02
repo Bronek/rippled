@@ -18,8 +18,10 @@
 //==============================================================================
 
 #include <test/jtx.h>
+
 #include <xrpld/app/tx/detail/ApplyContext.h>
 #include <xrpld/app/tx/detail/NFTokenUtils.h>
+
 #include <xrpl/protocol/Feature.h>
 #include <xrpl/protocol/jss.h>
 
@@ -27,16 +29,6 @@ namespace ripple {
 
 class FixNFTokenPageLinks_test : public beast::unit_test::suite
 {
-    // Helper function that returns the owner count of an account root.
-    static std::uint32_t
-    ownerCount(test::jtx::Env const& env, test::jtx::Account const& acct)
-    {
-        std::uint32_t ret{0};
-        if (auto const sleAcct = env.le(acct))
-            ret = sleAcct->at(sfOwnerCount);
-        return ret;
-    }
-
     // Helper function that returns the number of nfts owned by an account.
     static std::uint32_t
     nftCount(test::jtx::Env& env, test::jtx::Account const& acct)
@@ -147,7 +139,7 @@ class FixNFTokenPageLinks_test : public beast::unit_test::suite
         {
             // Verify that the LedgerStateFix transaction is disabled
             // without the fixNFTokenPageLinks amendment.
-            Env env{*this, supported_amendments() - fixNFTokenPageLinks};
+            Env env{*this, testable_amendments() - fixNFTokenPageLinks};
             env.fund(XRP(1000), alice);
 
             auto const linkFixFee = drops(env.current()->fees().increment);
@@ -156,7 +148,7 @@ class FixNFTokenPageLinks_test : public beast::unit_test::suite
                 ter(temDISABLED));
         }
 
-        Env env{*this, supported_amendments()};
+        Env env{*this, testable_amendments()};
         env.fund(XRP(1000), alice);
         std::uint32_t const ticketSeq = env.seq(alice);
         env(ticket::create(alice, 1));
@@ -214,7 +206,7 @@ class FixNFTokenPageLinks_test : public beast::unit_test::suite
 
         Account const alice("alice");
 
-        Env env{*this, supported_amendments()};
+        Env env{*this, testable_amendments()};
         env.fund(XRP(1000), alice);
 
         // These cases all return the same TER code, but they exercise
@@ -267,7 +259,7 @@ class FixNFTokenPageLinks_test : public beast::unit_test::suite
         Account const carol("carol");
         Account const daria("daria");
 
-        Env env{*this, supported_amendments() - fixNFTokenPageLinks};
+        Env env{*this, testable_amendments() - fixNFTokenPageLinks};
         env.fund(XRP(1000), alice, bob, carol, daria);
 
         //**********************************************************************
@@ -671,6 +663,6 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(FixNFTokenPageLinks, tx, ripple);
+BEAST_DEFINE_TESTSUITE(FixNFTokenPageLinks, app, ripple);
 
 }  // namespace ripple

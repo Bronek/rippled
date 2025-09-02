@@ -18,8 +18,7 @@
 //==============================================================================
 
 #include <test/nodestore/TestBase.h>
-#include <xrpld/nodestore/DummyScheduler.h>
-#include <xrpld/nodestore/Manager.h>
+
 #include <xrpld/nodestore/detail/DecodedBlob.h>
 #include <xrpld/nodestore/detail/EncodedBlob.h>
 
@@ -86,7 +85,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(NodeStoreBasic, ripple_core, ripple);
+BEAST_DEFINE_TESTSUITE(NodeStoreBasic, nodestore, ripple);
 
 }  // namespace NodeStore
 }  // namespace ripple

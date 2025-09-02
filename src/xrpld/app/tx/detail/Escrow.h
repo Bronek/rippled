@@ -63,6 +63,9 @@ public:
     static XRPAmount
     calculateBaseFee(ReadView const& view, STTx const& tx);
 
+    static TER
+    preclaim(PreclaimContext const& ctx);
+
     TER
     doApply() override;
 };
@@ -80,6 +83,9 @@ public:
 
     static NotTEC
     preflight(PreflightContext const& ctx);
+
+    static TER
+    preclaim(PreclaimContext const& ctx);
 
     TER
     doApply() override;

@@ -18,7 +18,7 @@
 //==============================================================================
 
 #include <test/csf/Scheduler.h>
-#include <xrpl/basics/ByteUtilities.h>
+
 #include <xrpl/beast/unit_test.h>
 
 #include <set>
@@ -83,7 +83,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(Scheduler, test, ripple);
+BEAST_DEFINE_TESTSUITE(Scheduler, csf, ripple);
 
 }  // namespace test
 }  // namespace ripple

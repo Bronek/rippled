@@ -19,7 +19,7 @@
 
 #include <xrpl/beast/core/CurrentThreadName.h>
 #include <xrpl/beast/unit_test.h>
-#include <atomic>
+
 #include <thread>
 
 namespace ripple {
@@ -86,7 +86,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(CurrentThreadName, core, beast);
+BEAST_DEFINE_TESTSUITE(CurrentThreadName, beast, beast);
 
 }  // namespace test
 }  // namespace ripple

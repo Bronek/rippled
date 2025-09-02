@@ -23,7 +23,7 @@
 #include <xrpld/rpc/GRPCHandlers.h>
 #include <xrpld/rpc/Role.h>
 #include <xrpld/rpc/handlers/LedgerHandler.h>
-#include <xrpl/json/Object.h>
+
 #include <xrpl/protocol/ErrorCodes.h>
 #include <xrpl/protocol/jss.h>
 #include <xrpl/resource/Fees.h>
@@ -54,10 +54,6 @@ LedgerHandler::check()
     bool const binary = params[jss::binary].asBool();
     bool const owner_funds = params[jss::owner_funds].asBool();
     bool const queue = params[jss::queue].asBool();
-    auto type = chooseLedgerEntryType(params);
-    if (type.first)
-        return type.first;
-    type_ = type.second;
 
     options_ = (full ? LedgerFill::full : 0) |
         (expand ? LedgerFill::expand : 0) |
@@ -80,7 +76,7 @@ LedgerHandler::check()
             return rpcTOO_BUSY;
         }
         context_.loadType =
-            binary ? Resource::feeMediumBurdenRPC : Resource::feeHighBurdenRPC;
+            binary ? Resource::feeMediumBurdenRPC : Resource::feeHeavyBurdenRPC;
     }
     if (queue)
     {
@@ -135,7 +131,8 @@ doLedgerGrpc(RPC::GRPCContext<org::xrpl::rpc::v1::GetLedgerRequest>& context)
         {
             for (auto& i : ledger->txs)
             {
-                assert(i.first);
+                XRPL_ASSERT(
+                    i.first, "ripple::doLedgerGrpc : non-null transaction");
                 if (request.expand())
                 {
                     auto txn = response.mutable_transactions_list()
@@ -211,7 +208,9 @@ doLedgerGrpc(RPC::GRPCContext<org::xrpl::rpc::v1::GetLedgerRequest>& context)
             obj->set_key(k.data(), k.size());
             if (inDesired)
             {
-                assert(inDesired->size() > 0);
+                XRPL_ASSERT(
+                    inDesired->size() > 0,
+                    "ripple::doLedgerGrpc : non-empty desired");
                 obj->set_data(inDesired->data(), inDesired->size());
             }
             if (inBase && inDesired)

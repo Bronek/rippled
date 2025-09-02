@@ -19,14 +19,22 @@
 
 #include <xrpl/basics/Log.h>
 #include <xrpl/basics/chrono.h>
-#include <xrpl/basics/contract.h>
-#include <boost/algorithm/string.hpp>
-#include <cassert>
+#include <xrpl/beast/utility/Journal.h>
+#include <xrpl/beast/utility/instrumentation.h>
+
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem/path.hpp>
+
+#include <chrono>
+#include <cstring>
 #include <fstream>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace ripple {
 
@@ -44,6 +52,14 @@ Logs::Sink::write(beast::severities::Severity level, std::string const& text)
     if (level < threshold())
         return;
 
+    logs_.write(level, partition_, text, console());
+}
+
+void
+Logs::Sink::writeAlways(
+    beast::severities::Severity level,
+    std::string const& text)
+{
     logs_.write(level, partition_, text, console());
 }
 
@@ -224,7 +240,7 @@ Logs::fromSeverity(beast::severities::Severity level)
             return lsERROR;
 
         default:
-            assert(false);
+            UNREACHABLE("ripple::Logs::fromSeverity : invalid severity");
             [[fallthrough]];
         case kFatal:
             break;
@@ -250,7 +266,7 @@ Logs::toSeverity(LogSeverity level)
         case lsERROR:
             return kError;
         default:
-            assert(false);
+            UNREACHABLE("ripple::Logs::toSeverity : invalid severity");
             [[fallthrough]];
         case lsFATAL:
             break;
@@ -277,7 +293,7 @@ Logs::toString(LogSeverity s)
         case lsFATAL:
             return "Fatal";
         default:
-            assert(false);
+            UNREACHABLE("ripple::Logs::toString : invalid severity");
             return "Unknown";
     }
 }
@@ -341,7 +357,7 @@ Logs::format(
             output += "ERR ";
             break;
         default:
-            assert(false);
+            UNREACHABLE("ripple::Logs::format : invalid severity");
             [[fallthrough]];
         case kFatal:
             output += "FTL ";

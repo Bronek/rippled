@@ -21,9 +21,10 @@
 #include <xrpl/basics/base_uint.h>
 #include <xrpl/basics/hardened_hash.h>
 #include <xrpl/beast/unit_test.h>
-#include <boost/endian/conversion.hpp>
-#include <complex>
 
+#include <boost/endian/conversion.hpp>
+
+#include <complex>
 #include <type_traits>
 
 namespace ripple {
@@ -365,7 +366,7 @@ struct base_uint_test : beast::unit_test::suite
     }
 };
 
-BEAST_DEFINE_TESTSUITE(base_uint, ripple_basics, ripple);
+BEAST_DEFINE_TESTSUITE(base_uint, basics, ripple);
 
 }  // namespace test
 }  // namespace ripple

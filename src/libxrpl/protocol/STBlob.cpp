@@ -17,8 +17,16 @@
 */
 //==============================================================================
 
-#include <xrpl/basics/StringUtilities.h>
+#include <xrpl/basics/strHex.h>
+#include <xrpl/beast/utility/instrumentation.h>
+#include <xrpl/protocol/SField.h>
+#include <xrpl/protocol/STBase.h>
 #include <xrpl/protocol/STBlob.h>
+#include <xrpl/protocol/Serializer.h>
+
+#include <cstddef>
+#include <string>
+#include <utility>
 
 namespace ripple {
 
@@ -54,17 +62,18 @@ STBlob::getText() const
 void
 STBlob::add(Serializer& s) const
 {
-    assert(getFName().isBinary());
-    assert(
+    XRPL_ASSERT(getFName().isBinary(), "ripple::STBlob::add : field is binary");
+    XRPL_ASSERT(
         (getFName().fieldType == STI_VL) ||
-        (getFName().fieldType == STI_ACCOUNT));
+            (getFName().fieldType == STI_ACCOUNT),
+        "ripple::STBlob::add : valid field type");
     s.addVL(value_.data(), value_.size());
 }
 
 bool
-STBlob::isEquivalent(const STBase& t) const
+STBlob::isEquivalent(STBase const& t) const
 {
-    const STBlob* v = dynamic_cast<const STBlob*>(&t);
+    STBlob const* v = dynamic_cast<STBlob const*>(&t);
     return v && (value_ == v->value_);
 }
 

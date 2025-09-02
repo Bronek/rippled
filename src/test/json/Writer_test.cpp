@@ -18,9 +18,9 @@
 //==============================================================================
 
 #include <test/json/TestOutputSuite.h>
+
 #include <xrpl/beast/unit_test.h>
 #include <xrpl/json/Writer.h>
-#include <xrpl/json/json_writer.h>
 
 namespace Json {
 
@@ -212,6 +212,6 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(JsonWriter, ripple_basics, ripple);
+BEAST_DEFINE_TESTSUITE(JsonWriter, json, ripple);
 
 }  // namespace Json

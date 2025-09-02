@@ -19,13 +19,13 @@
 
 #include <test/jtx.h>
 #include <test/jtx/TrustedPublisherServer.h>
+
 #include <xrpld/app/main/BasicApp.h>
 #include <xrpld/app/misc/ValidatorSite.h>
 #include <xrpld/core/ConfigSections.h>
-#include <xrpl/basics/base64.h>
+
 #include <xrpl/beast/unit_test.h>
 #include <xrpl/json/json_value.h>
-#include <xrpl/protocol/Sign.h>
 #include <xrpl/protocol/jss.h>
 
 #include <set>
@@ -49,6 +49,7 @@ public:
             for (std::string cmd : {"validators", "validator_list_sites"})
             {
                 Env env{*this, isAdmin ? envconfig() : envconfig(no_admin)};
+                env.set_retries(isAdmin ? 5 : 0);
                 auto const jrr = env.rpc(cmd)[jss::result];
                 if (isAdmin)
                 {
@@ -186,14 +187,14 @@ public:
         for (auto const& val : validators)
             expectedKeys.insert(toStr(val.masterPublic));
 
-        // Manage single-thread io_service for server.
+        // Manage single-thread io_context for server.
         BasicApp worker{1};
         using namespace std::chrono_literals;
         NetClock::time_point const validUntil{3600s};
         NetClock::time_point const validFrom2{validUntil - 60s};
         NetClock::time_point const validUntil2{validFrom2 + 3600s};
         auto server = make_TrustedPublisherServer(
-            worker.get_io_service(),
+            worker.get_io_context(),
             validators,
             validUntil,
             {{validFrom2, validUntil2}},
@@ -593,7 +594,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(ValidatorRPC, app, ripple);
+BEAST_DEFINE_TESTSUITE(ValidatorRPC, rpc, ripple);
 
 }  // namespace test
 }  // namespace ripple

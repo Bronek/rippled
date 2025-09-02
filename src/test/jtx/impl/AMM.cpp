@@ -18,10 +18,12 @@
 //==============================================================================
 
 #include <test/jtx/AMM.h>
-
 #include <test/jtx/Env.h>
+
+#include <xrpld/app/misc/AMMHelpers.h>
 #include <xrpld/app/misc/AMMUtils.h>
 #include <xrpld/rpc/detail/RPCHelpers.h>
+
 #include <xrpl/protocol/AMMCore.h>
 #include <xrpl/protocol/AmountConversions.h>
 #include <xrpl/protocol/jss.h>
@@ -38,12 +40,16 @@ number(STAmount const& a)
     return a;
 }
 
-static IOUAmount
-initialTokens(STAmount const& asset1, STAmount const& asset2)
+IOUAmount
+AMM::initialTokens()
 {
-    auto const product = number(asset1) * number(asset2);
-    return (IOUAmount)(product.mantissa() >= 0 ? root2(product)
-                                               : root2(-product));
+    if (!env_.enabled(fixAMMv1_3))
+    {
+        auto const product = number(asset1_) * number(asset2_);
+        return (IOUAmount)(product.mantissa() >= 0 ? root2(product)
+                                                   : root2(-product));
+    }
+    return getLPTokensBalance();
 }
 
 AMM::AMM(
@@ -64,7 +70,6 @@ AMM::AMM(
     , asset1_(asset1)
     , asset2_(asset2)
     , ammID_(keylet::amm(asset1_.issue(), asset2_.issue()).key)
-    , initialLPTokens_(initialTokens(asset1, asset2))
     , log_(log)
     , doClose_(close)
     , lastPurchasePrice_(0)
@@ -77,6 +82,7 @@ AMM::AMM(
           asset1_.issue().currency,
           asset2_.issue().currency,
           ammAccount_))
+    , initialLPTokens_(initialTokens())
 {
 }
 
@@ -140,7 +146,7 @@ AMM::create(
     if (flags)
         jv[jss::Flags] = *flags;
     if (fee_ != 0)
-        jv[jss::Fee] = std::to_string(fee_);
+        jv[sfFee] = std::to_string(fee_);
     else
         jv[jss::Fee] = std::to_string(env_.current()->fees().increment.drops());
     submit(jv, seq, ter);
@@ -820,7 +826,26 @@ pay(Account const& account, AccountID const& to, STAmount const& amount)
     jv[jss::Amount] = amount.getJson(JsonOptions::none);
     jv[jss::Destination] = to_string(to);
     jv[jss::TransactionType] = jss::Payment;
-    jv[jss::Flags] = tfUniversal;
+    return jv;
+}
+
+Json::Value
+ammClawback(
+    Account const& issuer,
+    Account const& holder,
+    Issue const& asset,
+    Issue const& asset2,
+    std::optional<STAmount> const& amount)
+{
+    Json::Value jv;
+    jv[jss::TransactionType] = jss::AMMClawback;
+    jv[jss::Account] = issuer.human();
+    jv[jss::Holder] = holder.human();
+    jv[jss::Asset] = to_json(asset);
+    jv[jss::Asset2] = to_json(asset2);
+    if (amount)
+        jv[jss::Amount] = amount->getJson(JsonOptions::none);
+
     return jv;
 }
 }  // namespace amm

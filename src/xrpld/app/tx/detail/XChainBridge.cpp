@@ -24,11 +24,12 @@
 #include <xrpld/ledger/ApplyView.h>
 #include <xrpld/ledger/PaymentSandbox.h>
 #include <xrpld/ledger/View.h>
+
 #include <xrpl/basics/Log.h>
 #include <xrpl/basics/Number.h>
-#include <xrpl/basics/XRPAmount.h>
 #include <xrpl/basics/chrono.h>
 #include <xrpl/beast/utility/Journal.h>
+#include <xrpl/beast/utility/instrumentation.h>
 #include <xrpl/protocol/AccountID.h>
 #include <xrpl/protocol/Feature.h>
 #include <xrpl/protocol/Indexes.h>
@@ -40,8 +41,8 @@
 #include <xrpl/protocol/TER.h>
 #include <xrpl/protocol/TxFlags.h>
 #include <xrpl/protocol/XChainAttestations.h>
-#include <xrpl/protocol/digest.h>
-#include <xrpl/protocol/st.h>
+#include <xrpl/protocol/XRPAmount.h>
+
 #include <unordered_map>
 #include <unordered_set>
 
@@ -222,7 +223,9 @@ claimHelper(
         auto i = signersList.find(a.keyAccount);
         if (i == signersList.end())
         {
-            assert(0);  // should have already been checked
+            UNREACHABLE(
+                "ripple::claimHelper : invalid inputs");  // should have already
+                                                          // been checked
             continue;
         }
         weight += i->second;
@@ -437,7 +440,7 @@ transferHelper(
     if (amt.native())
     {
         auto const sleSrc = psb.peek(keylet::account(src));
-        assert(sleSrc);
+        XRPL_ASSERT(sleSrc, "ripple::transferHelper : non-null source account");
         if (!sleSrc)
             return tecINTERNAL;
 
@@ -508,6 +511,7 @@ transferHelper(
         /*offer crossing*/ OfferCrossing::no,
         /*limit quality*/ std::nullopt,
         /*sendmax*/ std::nullopt,
+        /*domain id*/ std::nullopt,
         j);
 
     if (auto const r = result.result();

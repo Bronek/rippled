@@ -30,10 +30,10 @@
 #include <xrpld/peerfinder/detail/Source.h>
 #include <xrpld/peerfinder/detail/Store.h>
 #include <xrpld/peerfinder/detail/iosformat.h>
+
 #include <xrpl/basics/Log.h>
 #include <xrpl/basics/contract.h>
 #include <xrpl/basics/random.h>
-#include <xrpl/beast/container/aged_container_utility.h>
 #include <xrpl/beast/net/IPAddressConversion.h>
 
 #include <algorithm>
@@ -172,9 +172,7 @@ public:
     void
     addFixedPeer(std::string const& name, beast::IP::Endpoint const& ep)
     {
-        std::vector<beast::IP::Endpoint> v;
-        v.push_back(ep);
-        addFixedPeer(name, v);
+        addFixedPeer(name, std::vector<beast::IP::Endpoint>{ep});
     }
 
     void
@@ -261,7 +259,7 @@ public:
 
     //--------------------------------------------------------------------------
 
-    SlotImp::ptr
+    std::pair<SlotImp::ptr, Result>
     new_inbound_slot(
         beast::IP::Endpoint const& local_endpoint,
         beast::IP::Endpoint const& remote_endpoint)
@@ -277,12 +275,12 @@ public:
         {
             auto const count =
                 connectedAddresses_.count(remote_endpoint.address());
-            if (count > config_.ipLimit)
+            if (count + 1 > config_.ipLimit)
             {
                 JLOG(m_journal.debug())
                     << beast::leftw(18) << "Logic dropping inbound "
                     << remote_endpoint << " because of ip limits.";
-                return SlotImp::ptr();
+                return {SlotImp::ptr(), Result::ipLimitExceeded};
             }
         }
 
@@ -292,7 +290,7 @@ public:
             JLOG(m_journal.debug())
                 << beast::leftw(18) << "Logic dropping " << remote_endpoint
                 << " as duplicate incoming";
-            return SlotImp::ptr();
+            return {SlotImp::ptr(), Result::duplicatePeer};
         }
 
         // Create the slot
@@ -304,18 +302,21 @@ public:
         // Add slot to table
         auto const result(slots_.emplace(slot->remote_endpoint(), slot));
         // Remote address must not already exist
-        assert(result.second);
+        XRPL_ASSERT(
+            result.second,
+            "ripple::PeerFinder::Logic::new_inbound_slot : remote endpoint "
+            "inserted");
         // Add to the connected address list
         connectedAddresses_.emplace(remote_endpoint.address());
 
         // Update counts
         counts_.add(*slot);
 
-        return result.first->second;
+        return {result.first->second, Result::success};
     }
 
     // Can't check for self-connect because we don't know the local endpoint
-    SlotImp::ptr
+    std::pair<SlotImp::ptr, Result>
     new_outbound_slot(beast::IP::Endpoint const& remote_endpoint)
     {
         JLOG(m_journal.debug())
@@ -329,7 +330,7 @@ public:
             JLOG(m_journal.debug())
                 << beast::leftw(18) << "Logic dropping " << remote_endpoint
                 << " as duplicate connect";
-            return SlotImp::ptr();
+            return {SlotImp::ptr(), Result::duplicatePeer};
         }
 
         // Create the slot
@@ -339,7 +340,10 @@ public:
         // Add slot to table
         auto const result = slots_.emplace(slot->remote_endpoint(), slot);
         // Remote address must not already exist
-        assert(result.second);
+        XRPL_ASSERT(
+            result.second,
+            "ripple::PeerFinder::Logic::new_outbound_slot : remote endpoint "
+            "inserted");
 
         // Add to the connected address list
         connectedAddresses_.emplace(remote_endpoint.address());
@@ -347,7 +351,7 @@ public:
         // Update counts
         counts_.add(*slot);
 
-        return result.first->second;
+        return {result.first->second, Result::success};
     }
 
     bool
@@ -362,7 +366,9 @@ public:
         std::lock_guard _(lock_);
 
         // The object must exist in our table
-        assert(slots_.find(slot->remote_endpoint()) != slots_.end());
+        XRPL_ASSERT(
+            slots_.find(slot->remote_endpoint()) != slots_.end(),
+            "ripple::PeerFinder::Logic::onConnected : valid slot input");
         // Assign the local endpoint now that it's known
         slot->local_endpoint(local_endpoint);
 
@@ -371,8 +377,10 @@ public:
             auto const iter(slots_.find(local_endpoint));
             if (iter != slots_.end())
             {
-                assert(
-                    iter->second->local_endpoint() == slot->remote_endpoint());
+                XRPL_ASSERT(
+                    iter->second->local_endpoint() == slot->remote_endpoint(),
+                    "ripple::PeerFinder::Logic::onConnected : local and remote "
+                    "endpoints do match");
                 JLOG(m_journal.warn())
                     << beast::leftw(18) << "Logic dropping "
                     << slot->remote_endpoint() << " as self connect";
@@ -397,14 +405,17 @@ public:
         std::lock_guard _(lock_);
 
         // The object must exist in our table
-        assert(slots_.find(slot->remote_endpoint()) != slots_.end());
+        XRPL_ASSERT(
+            slots_.find(slot->remote_endpoint()) != slots_.end(),
+            "ripple::PeerFinder::Logic::activate : valid slot input");
         // Must be accepted or connected
-        assert(
-            slot->state() == Slot::accept || slot->state() == Slot::connected);
+        XRPL_ASSERT(
+            slot->state() == Slot::accept || slot->state() == Slot::connected,
+            "ripple::PeerFinder::Logic::activate : valid slot state");
 
         // Check for duplicate connection by key
         if (keys_.find(key) != keys_.end())
-            return Result::duplicate;
+            return Result::duplicatePeer;
 
         // If the peer belongs to a cluster or is reserved,
         // update the slot to reflect that.
@@ -417,6 +428,8 @@ public:
         {
             if (!slot->inbound())
                 bootcache_.on_success(slot->remote_endpoint());
+            if (slot->inbound() && counts_.in_max() == 0)
+                return Result::inboundDisabled;
             return Result::full;
         }
 
@@ -426,7 +439,9 @@ public:
         {
             [[maybe_unused]] bool const inserted = keys_.insert(key).second;
             // Public key must not already exist
-            assert(inserted);
+            XRPL_ASSERT(
+                inserted,
+                "ripple::PeerFinder::Logic::activate : public key inserted");
         }
 
         // Change state and update counts
@@ -636,7 +651,7 @@ public:
             // 2. We have slots
             // 3. We haven't failed the firewalled test
             //
-            if (config_.wantIncoming && counts_.inboundSlots() > 0)
+            if (config_.wantIncoming && counts_.in_max() > 0)
             {
                 Endpoint ep;
                 ep.hops = 0;
@@ -788,10 +803,14 @@ public:
         std::lock_guard _(lock_);
 
         // The object must exist in our table
-        assert(slots_.find(slot->remote_endpoint()) != slots_.end());
+        XRPL_ASSERT(
+            slots_.find(slot->remote_endpoint()) != slots_.end(),
+            "ripple::PeerFinder::Logic::on_endpoints : valid slot input");
 
         // Must be handshaked!
-        assert(slot->state() == Slot::active);
+        XRPL_ASSERT(
+            slot->state() == Slot::active,
+            "ripple::PeerFinder::Logic::on_endpoints : valid slot state");
 
         clock_type::time_point const now(m_clock.now());
 
@@ -803,7 +822,9 @@ public:
 
         for (auto const& ep : list)
         {
-            assert(ep.hops != 0);
+            XRPL_ASSERT(
+                ep.hops,
+                "ripple::PeerFinder::Logic::on_endpoints : nonzero hops");
 
             slot->recent.insert(ep.address, ep.hops);
 
@@ -956,7 +977,9 @@ public:
                 break;
 
             default:
-                assert(false);
+                UNREACHABLE(
+                    "ripple::PeerFinder::Logic::on_closed : invalid slot "
+                    "state");
                 break;
         }
     }
@@ -1109,9 +1132,9 @@ public:
         }
         else
         {
-            JLOG(m_journal.error())
-                << beast::leftw(18) << "Logic failed " << "'" << source->name()
-                << "' fetch, " << results.error.message();
+            JLOG(m_journal.error()) << beast::leftw(18) << "Logic failed "
+                                    << "'" << source->name() << "' fetch, "
+                                    << results.error.message();
         }
     }
 

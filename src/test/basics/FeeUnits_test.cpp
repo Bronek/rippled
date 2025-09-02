@@ -16,10 +16,9 @@
     OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-#include <xrpl/basics/FeeUnits.h>
 #include <xrpl/beast/unit_test.h>
+#include <xrpl/protocol/FeeUnits.h>
 #include <xrpl/protocol/SystemParameters.h>
-#include <type_traits>
 
 namespace ripple {
 namespace test {
@@ -372,7 +371,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(feeunits, ripple_basics, ripple);
+BEAST_DEFINE_TESTSUITE(feeunits, basics, ripple);
 
 }  // namespace test
 }  // namespace ripple

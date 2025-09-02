@@ -19,15 +19,13 @@
 
 #include <xrpld/app/paths/detail/Steps.h>
 #include <xrpld/ledger/ReadView.h>
-#include <xrpl/basics/IOUAmount.h>
-#include <xrpl/basics/XRPAmount.h>
+
 #include <xrpl/basics/contract.h>
 #include <xrpl/json/json_writer.h>
-#include <xrpl/protocol/Feature.h>
+#include <xrpl/protocol/IOUAmount.h>
+#include <xrpl/protocol/XRPAmount.h>
 
 #include <algorithm>
-#include <numeric>
-#include <sstream>
 
 namespace ripple {
 
@@ -100,13 +98,14 @@ toStep(
         // should already be taken care of
         JLOG(j.error())
             << "Found offer/account payment step. Aborting payment strand.";
-        assert(0);
+        UNREACHABLE("ripple::toStep : offer/account payment payment strand");
         return {temBAD_PATH, std::unique_ptr<Step>{}};
     }
 
-    assert(
+    XRPL_ASSERT(
         (e2->getNodeType() & STPathElement::typeCurrency) ||
-        (e2->getNodeType() & STPathElement::typeIssuer));
+            (e2->getNodeType() & STPathElement::typeIssuer),
+        "ripple::toStep : currency or issuer");
     auto const outCurrency = e2->getNodeType() & STPathElement::typeCurrency
         ? e2->getCurrency()
         : curIssue.currency;
@@ -120,7 +119,7 @@ toStep(
         return {temBAD_PATH, std::unique_ptr<Step>{}};
     }
 
-    assert(e2->isOffer());
+    XRPL_ASSERT(e2->isOffer(), "ripple::toStep : is offer");
 
     if (isXRP(outCurrency))
         return make_BookStepIX(ctx, curIssue);
@@ -143,6 +142,7 @@ toStrand(
     bool ownerPaysTransferFee,
     OfferCrossing offerCrossing,
     AMMContext& ammContext,
+    std::optional<uint256> const& domainID,
     beast::Journal j)
 {
     if (isXRP(src) || isXRP(dst) || !isConsistent(deliver) ||
@@ -280,6 +280,7 @@ toStrand(
             seenDirectIssues,
             seenBookOuts,
             ammContext,
+            domainID,
             j};
     };
 
@@ -391,7 +392,7 @@ toStrand(
             next->getCurrency() != curIssue.currency)
         {
             // Should never happen
-            assert(0);
+            UNREACHABLE("ripple::toStrand : offer currency mismatch");
             return {temBAD_PATH, Strand{}};
         }
 
@@ -457,7 +458,7 @@ toStrand(
     if (!checkStrand())
     {
         JLOG(j.warn()) << "Flow check strand failed";
-        assert(0);
+        UNREACHABLE("ripple::toStrand : invalid strand");
         return {temBAD_PATH, Strand{}};
     }
 
@@ -477,6 +478,7 @@ toStrands(
     bool ownerPaysTransferFee,
     OfferCrossing offerCrossing,
     AMMContext& ammContext,
+    std::optional<uint256> const& domainID,
     beast::Journal j)
 {
     std::vector<Strand> result;
@@ -503,6 +505,7 @@ toStrands(
             ownerPaysTransferFee,
             offerCrossing,
             ammContext,
+            domainID,
             j);
         auto const ter = sp.first;
         auto& strand = sp.second;
@@ -547,6 +550,7 @@ toStrands(
             ownerPaysTransferFee,
             offerCrossing,
             ammContext,
+            domainID,
             j);
         auto ter = sp.first;
         auto& strand = sp.second;
@@ -593,6 +597,7 @@ StrandContext::StrandContext(
     std::array<boost::container::flat_set<Issue>, 2>& seenDirectIssues_,
     boost::container::flat_set<Issue>& seenBookOuts_,
     AMMContext& ammContext_,
+    std::optional<uint256> const& domainID_,
     beast::Journal j_)
     : view(view_)
     , strandSrc(strandSrc_)
@@ -609,6 +614,7 @@ StrandContext::StrandContext(
     , seenDirectIssues(seenDirectIssues_)
     , seenBookOuts(seenBookOuts_)
     , ammContext(ammContext_)
+    , domainID(domainID_)
     , j(j_)
 {
 }

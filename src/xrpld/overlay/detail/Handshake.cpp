@@ -20,11 +20,14 @@
 #include <xrpld/app/ledger/LedgerMaster.h>
 #include <xrpld/app/main/Application.h>
 #include <xrpld/overlay/detail/Handshake.h>
+
 #include <xrpl/basics/base64.h>
 #include <xrpl/beast/core/LexicalCast.h>
 #include <xrpl/beast/rfc2616.h>
 #include <xrpl/protocol/digest.h>
+
 #include <boost/regex.hpp>
+
 #include <algorithm>
 
 // VFALCO Shouldn't we have to include the OpenSSL
@@ -323,7 +326,7 @@ verifyHandshake(
     {
         boost::system::error_code ec;
         auto const local_ip =
-            boost::asio::ip::address::from_string(iter->value(), ec);
+            boost::asio::ip::make_address(std::string_view(iter->value()), ec);
 
         if (ec)
             throw std::runtime_error("Invalid Local-IP");
@@ -338,7 +341,7 @@ verifyHandshake(
     {
         boost::system::error_code ec;
         auto const remote_ip =
-            boost::asio::ip::address::from_string(iter->value(), ec);
+            boost::asio::ip::make_address(std::string_view(iter->value()), ec);
 
         if (ec)
             throw std::runtime_error("Invalid Remote-IP");
@@ -411,7 +414,7 @@ makeResponse(
             app.config().COMPRESSION,
             app.config().LEDGER_REPLAY,
             app.config().TX_REDUCE_RELAY_ENABLE,
-            app.config().VP_REDUCE_RELAY_ENABLE));
+            app.config().VP_REDUCE_RELAY_BASE_SQUELCH_ENABLE));
 
     buildHandshake(resp, sharedValue, networkID, public_ip, remote_ip, app);
 

@@ -18,7 +18,9 @@
 //==============================================================================
 
 #include <test/jtx.h>
+
 #include <xrpld/app/misc/detail/WorkSSL.h>
+
 #include <xrpl/basics/StringUtilities.h>
 
 #include <condition_variable>
@@ -61,7 +63,7 @@ public:
             pUrl_.domain,
             pUrl_.path,
             port_,
-            env_.app().getIOService(),
+            env_.app().getIOContext(),
             env_.journal,
             env_.app().config(),
             lastEndpoint,
@@ -78,10 +80,11 @@ public:
     isMultipleEndpoints()
     {
         using boost::asio::ip::tcp;
-        tcp::resolver resolver(env_.app().getIOService());
+        tcp::resolver resolver(env_.app().getIOContext());
         std::string port = pUrl_.port ? std::to_string(*pUrl_.port) : "443";
-        tcp::resolver::iterator it = resolver.resolve(pUrl_.domain, port);
-        tcp::resolver::iterator end;
+        auto results = resolver.resolve(pUrl_.domain, port);
+        auto it = results.begin();
+        auto end = results.end();
         int n = 0;
         for (; it != end; ++it)
             ++n;
@@ -126,7 +129,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE_MANUAL_PRIO(DNS, ripple_data, ripple, 20);
+BEAST_DEFINE_TESTSUITE_MANUAL_PRIO(DNS, app, ripple, 20);
 
 }  // namespace test
 }  // namespace ripple

@@ -23,9 +23,9 @@
 #include <xrpld/app/paths/RippleCalc.h>
 #include <xrpld/app/paths/RippleLineCache.h>
 #include <xrpld/app/paths/detail/PathfinderUtils.h>
-#include <xrpld/core/Config.h>
 #include <xrpld/core/JobQueue.h>
 #include <xrpld/ledger/PaymentSandbox.h>
+
 #include <xrpl/basics/Log.h>
 #include <xrpl/basics/join.h>
 #include <xrpl/json/to_string.h>
@@ -77,7 +77,7 @@ struct AccountCandidate
     int priority;
     AccountID account;
 
-    static const int highPriority = 10000;
+    static int const highPriority = 10000;
 };
 
 bool
@@ -166,6 +166,7 @@ Pathfinder::Pathfinder(
     std::optional<AccountID> const& uSrcIssuer,
     STAmount const& saDstAmount,
     std::optional<STAmount> const& srcAmount,
+    std::optional<uint256> const& domain,
     Application& app)
     : mSrcAccount(uSrcAccount)
     , mDstAccount(uDstAccount)
@@ -176,19 +177,23 @@ Pathfinder::Pathfinder(
     , mSrcCurrency(uSrcCurrency)
     , mSrcIssuer(uSrcIssuer)
     , mSrcAmount(srcAmount.value_or(STAmount(
-          {uSrcCurrency,
-           uSrcIssuer.value_or(
-               isXRP(uSrcCurrency) ? xrpAccount() : uSrcAccount)},
+          Issue{
+              uSrcCurrency,
+              uSrcIssuer.value_or(
+                  isXRP(uSrcCurrency) ? xrpAccount() : uSrcAccount)},
           1u,
           0,
           true)))
     , convert_all_(convertAllCheck(mDstAmount))
+    , mDomain(domain)
     , mLedger(cache->getLedger())
     , mRLCache(cache)
     , app_(app)
     , j_(app.journal("Pathfinder"))
 {
-    assert(!uSrcIssuer || isXRP(uSrcCurrency) == isXRP(uSrcIssuer.value()));
+    XRPL_ASSERT(
+        !uSrcIssuer || isXRP(uSrcCurrency) == isXRP(uSrcIssuer.value()),
+        "ripple::Pathfinder::Pathfinder : valid inputs");
 }
 
 bool
@@ -233,7 +238,8 @@ Pathfinder::findPaths(
     mSource = STPathElement(account, mSrcCurrency, issuer);
     auto issuerString =
         mSrcIssuer ? to_string(*mSrcIssuer) : std::string("none");
-    JLOG(j_.trace()) << "findPaths>" << " mSrcAccount=" << mSrcAccount
+    JLOG(j_.trace()) << "findPaths>"
+                     << " mSrcAccount=" << mSrcAccount
                      << " mDstAccount=" << mDstAccount
                      << " mDstAmount=" << mDstAmount.getFullText()
                      << " mSrcCurrency=" << mSrcCurrency
@@ -368,6 +374,7 @@ Pathfinder::getPathLiquidity(
             mDstAccount,
             mSrcAccount,
             pathSet,
+            mDomain,
             app_.logs(),
             &rcInput);
         // If we can't get even the minimum liquidity requested, we're done.
@@ -388,6 +395,7 @@ Pathfinder::getPathLiquidity(
                 mDstAccount,
                 mSrcAccount,
                 pathSet,
+                mDomain,
                 app_.logs(),
                 &rcInput);
 
@@ -427,6 +435,7 @@ Pathfinder::computePathRanks(
             mDstAccount,
             mSrcAccount,
             STPathSet(),
+            mDomain,
             app_.logs(),
             &rcInput);
 
@@ -576,8 +585,10 @@ Pathfinder::getBestPaths(
     if (mCompletePaths.empty() && extraPaths.empty())
         return mCompletePaths;
 
-    assert(fullLiquidityPath.empty());
-    const bool issuerIsSender =
+    XRPL_ASSERT(
+        fullLiquidityPath.empty(),
+        "ripple::Pathfinder::getBestPaths : first empty path result");
+    bool const issuerIsSender =
         isXRP(mSrcCurrency) || (srcIssuer == mSrcAccount);
 
     std::vector<PathRank> extraPathRanks;
@@ -637,7 +648,7 @@ Pathfinder::getBestPaths(
 
         if (path.empty())
         {
-            assert(false);
+            UNREACHABLE("ripple::Pathfinder::getBestPaths : path not found");
             continue;
         }
 
@@ -680,7 +691,9 @@ Pathfinder::getBestPaths(
 
     if (remaining > beast::zero)
     {
-        assert(fullLiquidityPath.empty());
+        XRPL_ASSERT(
+            fullLiquidityPath.empty(),
+            "ripple::Pathfinder::getBestPaths : second empty path result");
         JLOG(j_.info()) << "Paths could not send " << remaining << " of "
                         << mDstAmount;
     }
@@ -733,7 +746,7 @@ Pathfinder::getPathsOut(
 
     if (!bFrozen)
     {
-        count = app_.getOrderBookDB().getBookSize(issue);
+        count = app_.getOrderBookDB().getBookSize(issue, mDomain);
 
         if (auto const lines = mRLCache->getRippleLines(account, direction))
         {
@@ -829,7 +842,9 @@ Pathfinder::addPathsForType(
     {
         case nt_SOURCE:
             // Source must always be at the start, so pathsOut has to be empty.
-            assert(pathsOut.empty());
+            XRPL_ASSERT(
+                pathsOut.empty(),
+                "ripple::Pathfinder::addPathsForType : empty paths");
             pathsOut.push_back(STPath());
             break;
 
@@ -934,7 +949,7 @@ addUniquePath(STPathSet& pathSet, STPath const& path)
 
 void
 Pathfinder::addLink(
-    const STPath& currentPath,   // The path to build from
+    STPath const& currentPath,   // The path to build from
     STPathSet& incompletePaths,  // The set of partial paths we add to
     int addFlags,
     std::function<bool(void)> const& continueCallback)
@@ -1118,7 +1133,8 @@ Pathfinder::addLink(
         {
             // to XRP only
             if (!bOnXRP &&
-                app_.getOrderBookDB().isBookToXRP({uEndCurrency, uEndIssuer}))
+                app_.getOrderBookDB().isBookToXRP(
+                    {uEndCurrency, uEndIssuer}, mDomain))
             {
                 STPathElement pathElement(
                     STPathElement::typeCurrency,
@@ -1132,7 +1148,7 @@ Pathfinder::addLink(
         {
             bool bDestOnly = (addFlags & afOB_LAST) != 0;
             auto books = app_.getOrderBookDB().getBooksByTakerPays(
-                {uEndCurrency, uEndIssuer});
+                {uEndCurrency, uEndIssuer}, mDomain);
             JLOG(j_.trace())
                 << books.size() << " books found from this currency/issuer";
 
@@ -1281,7 +1297,7 @@ void
 fillPaths(Pathfinder::PaymentType type, PathCostList const& costs)
 {
     auto& list = mPathTable[type];
-    assert(list.empty());
+    XRPL_ASSERT(list.empty(), "ripple::fillPaths : empty paths");
     for (auto& cost : costs)
         list.push_back({cost.cost, makePath(cost.path)});
 }

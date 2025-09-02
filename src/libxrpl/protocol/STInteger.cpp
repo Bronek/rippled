@@ -18,14 +18,23 @@
 //==============================================================================
 
 #include <xrpl/basics/Log.h>
-#include <xrpl/basics/StringUtilities.h>
 #include <xrpl/basics/safe_cast.h>
-#include <xrpl/beast/core/LexicalCast.h>
+#include <xrpl/beast/utility/instrumentation.h>
+#include <xrpl/json/json_value.h>
 #include <xrpl/protocol/LedgerFormats.h>
+#include <xrpl/protocol/Permissions.h>
+#include <xrpl/protocol/SField.h>
+#include <xrpl/protocol/STBase.h>
 #include <xrpl/protocol/STInteger.h>
+#include <xrpl/protocol/Serializer.h>
 #include <xrpl/protocol/TER.h>
 #include <xrpl/protocol/TxFormats.h>
+
 #include <charconv>
+#include <cstdint>
+#include <iterator>
+#include <string>
+#include <system_error>
 
 namespace ripple {
 
@@ -169,6 +178,27 @@ template <>
 Json::Value
 STUInt32::getJson(JsonOptions) const
 {
+    if (getFName() == sfPermissionValue)
+    {
+        auto const permissionValue =
+            static_cast<GranularPermissionType>(value_);
+        auto const granular =
+            Permission::getInstance().getGranularName(permissionValue);
+
+        if (granular)
+        {
+            return *granular;
+        }
+        else
+        {
+            auto const txType =
+                Permission::getInstance().permissionToTxType(value_);
+            auto item = TxFormats::getInstance().findByType(txType);
+            if (item != nullptr)
+                return item->getName();
+        }
+    }
+
     return value_;
 }
 
@@ -198,11 +228,27 @@ template <>
 Json::Value
 STUInt64::getJson(JsonOptions) const
 {
-    std::string str(16, 0);
-    auto ret = std::to_chars(str.data(), str.data() + str.size(), value_, 16);
-    assert(ret.ec == std::errc());
-    str.resize(std::distance(str.data(), ret.ptr));
-    return str;
+    auto convertToString = [](uint64_t const value, int const base) {
+        XRPL_ASSERT(
+            base == 10 || base == 16,
+            "ripple::STUInt64::getJson : base 10 or 16");
+        std::string str(
+            base == 10 ? 20 : 16, 0);  // Allocate space depending on base
+        auto ret =
+            std::to_chars(str.data(), str.data() + str.size(), value, base);
+        XRPL_ASSERT(
+            ret.ec == std::errc(),
+            "ripple::STUInt64::getJson : to_chars succeeded");
+        str.resize(std::distance(str.data(), ret.ptr));
+        return str;
+    };
+
+    if (auto const& fName = getFName(); fName.shouldMeta(SField::sMD_BaseTen))
+    {
+        return convertToString(value_, 10);  // Convert to base 10
+    }
+
+    return convertToString(value_, 16);  // Convert to base 16
 }
 
 }  // namespace ripple

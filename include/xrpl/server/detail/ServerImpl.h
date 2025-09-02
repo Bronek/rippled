@@ -22,18 +22,23 @@
 
 #include <xrpl/basics/chrono.h>
 #include <xrpl/beast/core/List.h>
-#include <xrpl/server/Server.h>
 #include <xrpl/server/detail/Door.h>
 #include <xrpl/server/detail/io_list.h>
+
 #include <boost/asio.hpp>
+#include <boost/asio/executor_work_guard.hpp>
+#include <boost/asio/io_context.hpp>
+
 #include <array>
 #include <chrono>
 #include <mutex>
 #include <optional>
+#include <unordered_map>
 
 namespace ripple {
 
-using Endpoints = std::vector<boost::asio::ip::tcp::endpoint>;
+using Endpoints =
+    std::unordered_map<std::string, boost::asio::ip::tcp::endpoint>;
 
 /** A multi-protocol server.
 
@@ -82,9 +87,11 @@ private:
 
     Handler& handler_;
     beast::Journal const j_;
-    boost::asio::io_service& io_service_;
-    boost::asio::io_service::strand strand_;
-    std::optional<boost::asio::io_service::work> work_;
+    boost::asio::io_context& io_context_;
+    boost::asio::strand<boost::asio::io_context::executor_type> strand_;
+    std::optional<boost::asio::executor_work_guard<
+        boost::asio::io_context::executor_type>>
+        work_;
 
     std::mutex m_;
     std::vector<Port> ports_;
@@ -97,7 +104,7 @@ private:
 public:
     ServerImpl(
         Handler& handler,
-        boost::asio::io_service& io_service,
+        boost::asio::io_context& io_context,
         beast::Journal journal);
 
     ~ServerImpl();
@@ -120,10 +127,10 @@ public:
         return ios_;
     }
 
-    boost::asio::io_service&
-    get_io_service()
+    boost::asio::io_context&
+    get_io_context()
     {
-        return io_service_;
+        return io_context_;
     }
 
     bool
@@ -137,13 +144,13 @@ private:
 template <class Handler>
 ServerImpl<Handler>::ServerImpl(
     Handler& handler,
-    boost::asio::io_service& io_service,
+    boost::asio::io_context& io_context,
     beast::Journal journal)
     : handler_(handler)
     , j_(journal)
-    , io_service_(io_service)
-    , strand_(io_service_)
-    , work_(io_service_)
+    , io_context_(io_context)
+    , strand_(boost::asio::make_strand(io_context_))
+    , work_(std::in_place, boost::asio::make_work_guard(io_context_))
 {
 }
 
@@ -168,11 +175,17 @@ ServerImpl<Handler>::ports(std::vector<Port> const& ports)
     for (auto const& port : ports)
     {
         ports_.push_back(port);
+        auto& internalPort = ports_.back();
         if (auto sp = ios_.emplace<Door<Handler>>(
-                handler_, io_service_, ports_.back(), j_))
+                handler_, io_context_, internalPort, j_))
         {
             list_.push_back(sp);
-            eps.push_back(sp->get_endpoint());
+
+            auto ep = sp->get_endpoint();
+            if (!internalPort.port)
+                internalPort.port = ep.port();
+            eps.emplace(port.name, std::move(ep));
+
             sp->run();
         }
     }

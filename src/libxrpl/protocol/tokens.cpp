@@ -25,21 +25,25 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.
  */
 
+#include <xrpl/basics/Expected.h>
+#include <xrpl/basics/safe_cast.h>
+#include <xrpl/beast/utility/instrumentation.h>
+#include <xrpl/protocol/detail/b58_utils.h>
+#include <xrpl/protocol/detail/token_errors.h>
+#include <xrpl/protocol/digest.h>
 #include <xrpl/protocol/tokens.h>
 
-#include <xrpl/basics/safe_cast.h>
-#include <xrpl/protocol/detail/b58_utils.h>
-#include <xrpl/protocol/digest.h>
-
 #include <boost/container/small_vector.hpp>
-#include <boost/endian.hpp>
 #include <boost/endian/conversion.hpp>
 
-#include <cassert>
+#include <algorithm>
+#include <array>
+#include <cstdint>
 #include <cstring>
-#include <memory>
+#include <span>
+#include <string>
+#include <string_view>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
 /*
@@ -248,7 +252,8 @@ encodeBase58(
             iter[-1] = carry % 58;
             carry /= 58;
         }
-        assert(carry == 0);
+        XRPL_ASSERT(
+            carry == 0, "ripple::b58_ref::detail::encodeBase58 : zero carry");
         pbegin++;
     }
 
@@ -298,7 +303,8 @@ decodeBase58(std::string const& s)
             *iter = carry % 256;
             carry /= 256;
         }
-        assert(carry == 0);
+        XRPL_ASSERT(
+            carry == 0, "ripple::b58_ref::detail::decodeBase58 : zero carry");
         ++psz;
         --remain;
     }
@@ -535,8 +541,10 @@ b58_to_b256_be(std::string_view input, std::span<std::uint8_t> out)
         ripple::b58_fast::detail::div_rem(input.size(), 10);
     auto const num_partial_coeffs = partial_coeff_len ? 1 : 0;
     auto const num_b_58_10_coeffs = num_full_coeffs + num_partial_coeffs;
-    assert(num_b_58_10_coeffs <= b_58_10_coeff.size());
-    for (auto c : input.substr(0, partial_coeff_len))
+    XRPL_ASSERT(
+        num_b_58_10_coeffs <= b_58_10_coeff.size(),
+        "ripple::b58_fast::detail::b58_to_b256_be : maximum coeff");
+    for (unsigned char c : input.substr(0, partial_coeff_len))
     {
         auto cur_val = ::ripple::alphabetReverse[c];
         if (cur_val < 0)
@@ -550,7 +558,7 @@ b58_to_b256_be(std::string_view input, std::span<std::uint8_t> out)
     {
         for (int j = 0; j < num_full_coeffs; ++j)
         {
-            auto c = input[partial_coeff_len + j * 10 + i];
+            unsigned char c = input[partial_coeff_len + j * 10 + i];
             auto cur_val = ::ripple::alphabetReverse[c];
             if (cur_val < 0)
             {

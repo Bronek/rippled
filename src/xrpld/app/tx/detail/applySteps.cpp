@@ -19,12 +19,14 @@
 
 #include <xrpld/app/tx/applySteps.h>
 #include <xrpld/app/tx/detail/AMMBid.h>
+#include <xrpld/app/tx/detail/AMMClawback.h>
 #include <xrpld/app/tx/detail/AMMCreate.h>
 #include <xrpld/app/tx/detail/AMMDelete.h>
 #include <xrpld/app/tx/detail/AMMDeposit.h>
 #include <xrpld/app/tx/detail/AMMVote.h>
 #include <xrpld/app/tx/detail/AMMWithdraw.h>
 #include <xrpld/app/tx/detail/ApplyContext.h>
+#include <xrpld/app/tx/detail/Batch.h>
 #include <xrpld/app/tx/detail/CancelCheck.h>
 #include <xrpld/app/tx/detail/CancelOffer.h>
 #include <xrpld/app/tx/detail/CashCheck.h>
@@ -33,25 +35,41 @@
 #include <xrpld/app/tx/detail/CreateCheck.h>
 #include <xrpld/app/tx/detail/CreateOffer.h>
 #include <xrpld/app/tx/detail/CreateTicket.h>
+#include <xrpld/app/tx/detail/Credentials.h>
 #include <xrpld/app/tx/detail/DID.h>
+#include <xrpld/app/tx/detail/DelegateSet.h>
 #include <xrpld/app/tx/detail/DeleteAccount.h>
 #include <xrpld/app/tx/detail/DeleteOracle.h>
 #include <xrpld/app/tx/detail/DepositPreauth.h>
 #include <xrpld/app/tx/detail/Escrow.h>
 #include <xrpld/app/tx/detail/LedgerStateFix.h>
+#include <xrpld/app/tx/detail/MPTokenAuthorize.h>
+#include <xrpld/app/tx/detail/MPTokenIssuanceCreate.h>
+#include <xrpld/app/tx/detail/MPTokenIssuanceDestroy.h>
+#include <xrpld/app/tx/detail/MPTokenIssuanceSet.h>
 #include <xrpld/app/tx/detail/NFTokenAcceptOffer.h>
 #include <xrpld/app/tx/detail/NFTokenBurn.h>
 #include <xrpld/app/tx/detail/NFTokenCancelOffer.h>
 #include <xrpld/app/tx/detail/NFTokenCreateOffer.h>
 #include <xrpld/app/tx/detail/NFTokenMint.h>
+#include <xrpld/app/tx/detail/NFTokenModify.h>
 #include <xrpld/app/tx/detail/PayChan.h>
 #include <xrpld/app/tx/detail/Payment.h>
+#include <xrpld/app/tx/detail/PermissionedDomainDelete.h>
+#include <xrpld/app/tx/detail/PermissionedDomainSet.h>
 #include <xrpld/app/tx/detail/SetAccount.h>
 #include <xrpld/app/tx/detail/SetOracle.h>
 #include <xrpld/app/tx/detail/SetRegularKey.h>
 #include <xrpld/app/tx/detail/SetSignerList.h>
 #include <xrpld/app/tx/detail/SetTrust.h>
+#include <xrpld/app/tx/detail/VaultClawback.h>
+#include <xrpld/app/tx/detail/VaultCreate.h>
+#include <xrpld/app/tx/detail/VaultDelete.h>
+#include <xrpld/app/tx/detail/VaultDeposit.h>
+#include <xrpld/app/tx/detail/VaultSet.h>
+#include <xrpld/app/tx/detail/VaultWithdraw.h>
 #include <xrpld/app/tx/detail/XChainBridge.h>
+
 #include <xrpl/protocol/TxFormats.h>
 
 #include <stdexcept>
@@ -76,98 +94,17 @@ with_txn_type(TxType txnType, F&& f)
 {
     switch (txnType)
     {
-        case ttACCOUNT_DELETE:
-            return f.template operator()<DeleteAccount>();
-        case ttACCOUNT_SET:
-            return f.template operator()<SetAccount>();
-        case ttCHECK_CANCEL:
-            return f.template operator()<CancelCheck>();
-        case ttCHECK_CASH:
-            return f.template operator()<CashCheck>();
-        case ttCHECK_CREATE:
-            return f.template operator()<CreateCheck>();
-        case ttDEPOSIT_PREAUTH:
-            return f.template operator()<DepositPreauth>();
-        case ttOFFER_CANCEL:
-            return f.template operator()<CancelOffer>();
-        case ttOFFER_CREATE:
-            return f.template operator()<CreateOffer>();
-        case ttESCROW_CREATE:
-            return f.template operator()<EscrowCreate>();
-        case ttESCROW_FINISH:
-            return f.template operator()<EscrowFinish>();
-        case ttESCROW_CANCEL:
-            return f.template operator()<EscrowCancel>();
-        case ttLEDGER_STATE_FIX:
-            return f.template operator()<LedgerStateFix>();
-        case ttPAYCHAN_CLAIM:
-            return f.template operator()<PayChanClaim>();
-        case ttPAYCHAN_CREATE:
-            return f.template operator()<PayChanCreate>();
-        case ttPAYCHAN_FUND:
-            return f.template operator()<PayChanFund>();
-        case ttPAYMENT:
-            return f.template operator()<Payment>();
-        case ttREGULAR_KEY_SET:
-            return f.template operator()<SetRegularKey>();
-        case ttSIGNER_LIST_SET:
-            return f.template operator()<SetSignerList>();
-        case ttTICKET_CREATE:
-            return f.template operator()<CreateTicket>();
-        case ttTRUST_SET:
-            return f.template operator()<SetTrust>();
-        case ttAMENDMENT:
-        case ttFEE:
-        case ttUNL_MODIFY:
-            return f.template operator()<Change>();
-        case ttNFTOKEN_MINT:
-            return f.template operator()<NFTokenMint>();
-        case ttNFTOKEN_BURN:
-            return f.template operator()<NFTokenBurn>();
-        case ttNFTOKEN_CREATE_OFFER:
-            return f.template operator()<NFTokenCreateOffer>();
-        case ttNFTOKEN_CANCEL_OFFER:
-            return f.template operator()<NFTokenCancelOffer>();
-        case ttNFTOKEN_ACCEPT_OFFER:
-            return f.template operator()<NFTokenAcceptOffer>();
-        case ttCLAWBACK:
-            return f.template operator()<Clawback>();
-        case ttAMM_CREATE:
-            return f.template operator()<AMMCreate>();
-        case ttAMM_DEPOSIT:
-            return f.template operator()<AMMDeposit>();
-        case ttAMM_WITHDRAW:
-            return f.template operator()<AMMWithdraw>();
-        case ttAMM_VOTE:
-            return f.template operator()<AMMVote>();
-        case ttAMM_BID:
-            return f.template operator()<AMMBid>();
-        case ttAMM_DELETE:
-            return f.template operator()<AMMDelete>();
-        case ttXCHAIN_CREATE_BRIDGE:
-            return f.template operator()<XChainCreateBridge>();
-        case ttXCHAIN_MODIFY_BRIDGE:
-            return f.template operator()<BridgeModify>();
-        case ttXCHAIN_CREATE_CLAIM_ID:
-            return f.template operator()<XChainCreateClaimID>();
-        case ttXCHAIN_COMMIT:
-            return f.template operator()<XChainCommit>();
-        case ttXCHAIN_CLAIM:
-            return f.template operator()<XChainClaim>();
-        case ttXCHAIN_ADD_CLAIM_ATTESTATION:
-            return f.template operator()<XChainAddClaimAttestation>();
-        case ttXCHAIN_ADD_ACCOUNT_CREATE_ATTESTATION:
-            return f.template operator()<XChainAddAccountCreateAttestation>();
-        case ttXCHAIN_ACCOUNT_CREATE_COMMIT:
-            return f.template operator()<XChainCreateAccountCommit>();
-        case ttDID_SET:
-            return f.template operator()<DIDSet>();
-        case ttDID_DELETE:
-            return f.template operator()<DIDDelete>();
-        case ttORACLE_SET:
-            return f.template operator()<SetOracle>();
-        case ttORACLE_DELETE:
-            return f.template operator()<DeleteOracle>();
+#pragma push_macro("TRANSACTION")
+#undef TRANSACTION
+
+#define TRANSACTION(tag, value, name, delegatable, fields) \
+    case tag:                                              \
+        return f.template operator()<name>();
+
+#include <xrpl/protocol/detail/transactions.macro>
+
+#undef TRANSACTION
+#pragma pop_macro("TRANSACTION")
         default:
             throw UnknownTxnType(txnType);
     }
@@ -231,7 +168,7 @@ invoke_preflight(PreflightContext const& ctx)
         // Should never happen
         JLOG(ctx.j.fatal())
             << "Unknown transaction type in preflight: " << e.txnType;
-        assert(false);
+        UNREACHABLE("ripple::invoke_preflight : unknown transaction type");
         return {temUNKNOWN, TxConsequences{temUNKNOWN}};
     }
 }
@@ -266,6 +203,11 @@ invoke_preclaim(PreclaimContext const& ctx)
                 if (result != tesSUCCESS)
                     return result;
 
+                result = T::checkPermission(ctx.view, ctx.tx);
+
+                if (result != tesSUCCESS)
+                    return result;
+
                 result = T::checkSign(ctx);
 
                 if (result != tesSUCCESS)
@@ -280,11 +222,27 @@ invoke_preclaim(PreclaimContext const& ctx)
         // Should never happen
         JLOG(ctx.j.fatal())
             << "Unknown transaction type in preclaim: " << e.txnType;
-        assert(false);
+        UNREACHABLE("ripple::invoke_preclaim : unknown transaction type");
         return temUNKNOWN;
     }
 }
 
+/**
+ * @brief Calculates the base fee for a given transaction.
+ *
+ * This function determines the base fee required for the specified transaction
+ * by invoking the appropriate fee calculation logic based on the transaction
+ * type. It uses a type-dispatch mechanism to select the correct calculation
+ * method.
+ *
+ * @param view The ledger view to use for fee calculation.
+ * @param tx The transaction for which the base fee is to be calculated.
+ * @return The calculated base fee as an XRPAmount.
+ *
+ * @throws std::exception If an error occurs during fee calculation, including
+ * but not limited to unknown transaction types or internal errors, the function
+ * logs an error and returns an XRPAmount of zero.
+ */
 static XRPAmount
 invoke_calculateBaseFee(ReadView const& view, STTx const& tx)
 {
@@ -296,7 +254,8 @@ invoke_calculateBaseFee(ReadView const& view, STTx const& tx)
     }
     catch (UnknownTxnType const& e)
     {
-        assert(false);
+        UNREACHABLE(
+            "ripple::invoke_calculateBaseFee : unknown transaction type");
         return XRPAmount{0};
     }
 }
@@ -308,7 +267,9 @@ TxConsequences::TxConsequences(NotTEC pfresult)
     , seqProx_(SeqProxy::sequence(0))
     , sequencesConsumed_(0)
 {
-    assert(!isTesSuccess(pfresult));
+    XRPL_ASSERT(
+        !isTesSuccess(pfresult),
+        "ripple::TxConsequences::TxConsequences : is not tesSUCCESS");
 }
 
 TxConsequences::TxConsequences(STTx const& tx)
@@ -340,7 +301,7 @@ TxConsequences::TxConsequences(STTx const& tx, std::uint32_t sequencesConsumed)
     sequencesConsumed_ = sequencesConsumed;
 }
 
-static std::pair<TER, bool>
+static ApplyResult
 invoke_apply(ApplyContext& ctx)
 {
     try
@@ -355,7 +316,7 @@ invoke_apply(ApplyContext& ctx)
         // Should never happen
         JLOG(ctx.journal.fatal())
             << "Unknown transaction type in apply: " << e.txnType;
-        assert(false);
+        UNREACHABLE("ripple::invoke_apply : unknown transaction type");
         return {temUNKNOWN, false};
     }
 }
@@ -375,7 +336,28 @@ preflight(
     }
     catch (std::exception const& e)
     {
-        JLOG(j.fatal()) << "apply: " << e.what();
+        JLOG(j.fatal()) << "apply (preflight): " << e.what();
+        return {pfctx, {tefEXCEPTION, TxConsequences{tx}}};
+    }
+}
+
+PreflightResult
+preflight(
+    Application& app,
+    Rules const& rules,
+    uint256 const& parentBatchId,
+    STTx const& tx,
+    ApplyFlags flags,
+    beast::Journal j)
+{
+    PreflightContext const pfctx(app, tx, parentBatchId, rules, flags, j);
+    try
+    {
+        return {pfctx, invoke_preflight(pfctx)};
+    }
+    catch (std::exception const& e)
+    {
+        JLOG(j.fatal()) << "apply (preflight): " << e.what();
         return {pfctx, {tefEXCEPTION, TxConsequences{tx}}};
     }
 }
@@ -389,18 +371,31 @@ preclaim(
     std::optional<PreclaimContext const> ctx;
     if (preflightResult.rules != view.rules())
     {
-        auto secondFlight = preflight(
-            app,
-            view.rules(),
-            preflightResult.tx,
-            preflightResult.flags,
-            preflightResult.j);
+        auto secondFlight = [&]() {
+            if (preflightResult.parentBatchId)
+                return preflight(
+                    app,
+                    view.rules(),
+                    preflightResult.parentBatchId.value(),
+                    preflightResult.tx,
+                    preflightResult.flags,
+                    preflightResult.j);
+
+            return preflight(
+                app,
+                view.rules(),
+                preflightResult.tx,
+                preflightResult.flags,
+                preflightResult.j);
+        }();
+
         ctx.emplace(
             app,
             view,
             secondFlight.ter,
             secondFlight.tx,
             secondFlight.flags,
+            secondFlight.parentBatchId,
             secondFlight.j);
     }
     else
@@ -411,8 +406,10 @@ preclaim(
             preflightResult.ter,
             preflightResult.tx,
             preflightResult.flags,
+            preflightResult.parentBatchId,
             preflightResult.j);
     }
+
     try
     {
         if (ctx->preflightResult != tesSUCCESS)
@@ -421,7 +418,7 @@ preclaim(
     }
     catch (std::exception const& e)
     {
-        JLOG(ctx->j.fatal()) << "apply: " << e.what();
+        JLOG(ctx->j.fatal()) << "apply (preclaim): " << e.what();
         return {*ctx, tefEXCEPTION};
     }
 }
@@ -438,7 +435,7 @@ calculateDefaultBaseFee(ReadView const& view, STTx const& tx)
     return Transactor::calculateBaseFee(view, tx);
 }
 
-std::pair<TER, bool>
+ApplyResult
 doApply(PreclaimResult const& preclaimResult, Application& app, OpenView& view)
 {
     if (preclaimResult.view.seq() != view.seq())
@@ -454,6 +451,7 @@ doApply(PreclaimResult const& preclaimResult, Application& app, OpenView& view)
         ApplyContext ctx(
             app,
             view,
+            preclaimResult.parentBatchId,
             preclaimResult.tx,
             preclaimResult.ter,
             calculateBaseFee(view, preclaimResult.tx),

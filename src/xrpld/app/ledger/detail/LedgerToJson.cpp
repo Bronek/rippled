@@ -19,13 +19,14 @@
 
 #include <xrpld/app/ledger/LedgerMaster.h>
 #include <xrpld/app/ledger/LedgerToJson.h>
-#include <xrpld/app/main/Application.h>
 #include <xrpld/app/misc/DeliverMax.h>
 #include <xrpld/app/misc/TxQ.h>
 #include <xrpld/rpc/Context.h>
 #include <xrpld/rpc/DeliveredAmount.h>
-#include <xrpld/rpc/detail/RPCHelpers.h>
+#include <xrpld/rpc/MPTokenIssuanceID.h>
+
 #include <xrpl/basics/base_uint.h>
+#include <xrpl/protocol/ApiVersion.h>
 #include <xrpl/protocol/jss.h>
 
 namespace ripple {
@@ -156,12 +157,18 @@ fillJsonTx(
                     fill.ledger,
                     txn,
                     {txn->getTransactionID(), fill.ledger.seq(), *stMeta});
+
+            // If applicable, insert mpt issuance id
+            RPC::insertMPTokenIssuanceID(
+                txJson[jss::meta],
+                txn,
+                {txn->getTransactionID(), fill.ledger.seq(), *stMeta});
         }
 
         if (!fill.ledger.open())
             txJson[jss::ledger_hash] = to_string(fill.ledger.info().hash);
 
-        const bool validated =
+        bool const validated =
             fill.context->ledgerMaster.isValidated(fill.ledger);
         txJson[jss::validated] = validated;
         if (validated)
@@ -187,6 +194,12 @@ fillJsonTx(
                     fill.ledger,
                     txn,
                     {txn->getTransactionID(), fill.ledger.seq(), *stMeta});
+
+            // If applicable, insert mpt issuance id
+            RPC::insertMPTokenIssuanceID(
+                txJson[jss::metaData],
+                txn,
+                {txn->getTransactionID(), fill.ledger.seq(), *stMeta});
         }
     }
 
@@ -255,19 +268,16 @@ fillJsonState(Object& json, LedgerFill const& fill)
 
     for (auto const& sle : ledger.sles)
     {
-        if (fill.type == ltANY || sle->getType() == fill.type)
+        if (binary)
         {
-            if (binary)
-            {
-                auto&& obj = appendObject(array);
-                obj[jss::hash] = to_string(sle->key());
-                obj[jss::tx_blob] = serializeHex(*sle);
-            }
-            else if (expanded)
-                array.append(sle->getJson(JsonOptions::none));
-            else
-                array.append(to_string(sle->key()));
+            auto&& obj = appendObject(array);
+            obj[jss::hash] = to_string(sle->key());
+            obj[jss::tx_blob] = serializeHex(*sle);
         }
+        else if (expanded)
+            array.append(sle->getJson(JsonOptions::none));
+        else
+            array.append(to_string(sle->key()));
     }
 }
 

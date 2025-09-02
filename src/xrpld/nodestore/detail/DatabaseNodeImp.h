@@ -21,6 +21,7 @@
 #define RIPPLE_NODESTORE_DATABASENODEIMP_H_INCLUDED
 
 #include <xrpld/nodestore/Database.h>
+
 #include <xrpl/basics/TaggedCache.h>
 #include <xrpl/basics/chrono.h>
 
@@ -76,7 +77,10 @@ public:
                 j);
         }
 
-        assert(backend_);
+        XRPL_ASSERT(
+            backend_,
+            "ripple::NodeStore::DatabaseNodeImp::DatabaseNodeImp : non-null "
+            "backend");
     }
 
     ~DatabaseNodeImp()

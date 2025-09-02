@@ -21,6 +21,7 @@
 #define RIPPLE_PROTOCOL_HASHPREFIX_H_INCLUDED
 
 #include <xrpl/beast/hash/hash_append.h>
+
 #include <cstdint>
 
 namespace ripple {
@@ -84,6 +85,12 @@ enum class HashPrefix : std::uint32_t {
 
     /** Payment Channel Claim */
     paymentChannelClaim = detail::make_hash_prefix('C', 'L', 'M'),
+
+    /** Credentials signature */
+    credential = detail::make_hash_prefix('C', 'R', 'D'),
+
+    /** Batch */
+    batch = detail::make_hash_prefix('B', 'C', 'H'),
 };
 
 template <class Hasher>

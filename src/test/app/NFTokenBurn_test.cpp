@@ -18,7 +18,9 @@
 //==============================================================================
 
 #include <test/jtx.h>
+
 #include <xrpld/app/tx/detail/NFTokenUtils.h>
+
 #include <xrpl/protocol/Feature.h>
 #include <xrpl/protocol/jss.h>
 
@@ -28,16 +30,6 @@ namespace ripple {
 
 class NFTokenBurnBaseUtil_test : public beast::unit_test::suite
 {
-    // Helper function that returns the owner count of an account root.
-    static std::uint32_t
-    ownerCount(test::jtx::Env const& env, test::jtx::Account const& acct)
-    {
-        std::uint32_t ret{0};
-        if (auto const sleAcct = env.le(acct))
-            ret = sleAcct->at(sfOwnerCount);
-        return ret;
-    }
-
     // Helper function that returns the number of nfts owned by an account.
     static std::uint32_t
     nftCount(test::jtx::Env& env, test::jtx::Account const& acct)
@@ -1393,7 +1385,7 @@ protected:
     run(std::uint32_t instance, bool last = false)
     {
         using namespace test::jtx;
-        static FeatureBitset const all{supported_amendments()};
+        static FeatureBitset const all{testable_amendments()};
         static FeatureBitset const fixNFTV1_2{fixNonFungibleTokensV1_2};
         static FeatureBitset const fixNFTDir{fixNFTokenDirV1};
         static FeatureBitset const fixNFTRemint{fixNFTokenRemint};
@@ -1462,10 +1454,10 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE_PRIO(NFTokenBurnBaseUtil, tx, ripple, 3);
-BEAST_DEFINE_TESTSUITE_PRIO(NFTokenBurnWOfixFungTokens, tx, ripple, 3);
-BEAST_DEFINE_TESTSUITE_PRIO(NFTokenBurnWOFixTokenRemint, tx, ripple, 3);
-BEAST_DEFINE_TESTSUITE_PRIO(NFTokenBurnWOFixNFTPageLinks, tx, ripple, 3);
-BEAST_DEFINE_TESTSUITE_PRIO(NFTokenBurnAllFeatures, tx, ripple, 3);
+BEAST_DEFINE_TESTSUITE_PRIO(NFTokenBurnBaseUtil, app, ripple, 3);
+BEAST_DEFINE_TESTSUITE_PRIO(NFTokenBurnWOfixFungTokens, app, ripple, 3);
+BEAST_DEFINE_TESTSUITE_PRIO(NFTokenBurnWOFixTokenRemint, app, ripple, 3);
+BEAST_DEFINE_TESTSUITE_PRIO(NFTokenBurnWOFixNFTPageLinks, app, ripple, 3);
+BEAST_DEFINE_TESTSUITE_PRIO(NFTokenBurnAllFeatures, app, ripple, 3);
 
 }  // namespace ripple

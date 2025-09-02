@@ -23,11 +23,13 @@
 #include <xrpld/nodestore/Backend.h>
 #include <xrpld/nodestore/NodeObject.h>
 #include <xrpld/nodestore/Scheduler.h>
-#include <xrpl/basics/TaggedCache.h>
+
+#include <xrpl/basics/BasicConfig.h>
+#include <xrpl/basics/Log.h>
+#include <xrpl/basics/TaggedCache.ipp>
 #include <xrpl/protocol/SystemParameters.h>
 
 #include <condition_variable>
-#include <thread>
 
 namespace ripple {
 
@@ -246,7 +248,9 @@ protected:
     void
     storeStats(std::uint64_t count, std::uint64_t sz)
     {
-        assert(count <= sz);
+        XRPL_ASSERT(
+            count <= sz,
+            "ripple::NodeStore::Database::storeStats : valid inputs");
         storeCount_ += count;
         storeSz_ += sz;
     }

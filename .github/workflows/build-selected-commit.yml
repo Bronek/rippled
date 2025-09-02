@@ -55,7 +55,7 @@ env:
 
 jobs:
   build:
-    runs-on: ["self-hosted", "Linux", "X64", "heavy"]
+    runs-on: ubuntu-latest
     container: inputs.build_container
     steps:
       - name: Checkout this workflow

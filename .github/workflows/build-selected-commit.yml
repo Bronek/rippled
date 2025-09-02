@@ -66,6 +66,7 @@ jobs:
             conan
       - name: Move workflow files on a side
         run: |
+          mkdir -p ${{ runner.temp }}
           mv .github conan ${{ runner.temp }}
           git clean -dfx
           rm -rf .git

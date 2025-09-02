@@ -64,16 +64,20 @@ jobs:
           sparse-checkout: |
             .github
             conan
+      - name: Move workflow files on a side
+        run: |
+          mv .github conan ${{ runner.temp }}
+          git clean -dfx
+          rm -rf .git
       - name: Checkout the commit to build
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
           ref: ${{ inputs.commit }}
-          sparse-checkout: |
-            conanfile.py
-            CMakeLists.txt
-            cmake
-            include
-            src
+      - name: Restore workflow files
+        run: |
+          rm -rf .github conan
+          mv ${{ runner.temp }}/.github .
+          mv ${{ runner.temp }}/conan .
       - name: Prepare runner
         uses: XRPLF/actions/.github/actions/prepare-runner@638e0dc11ea230f91bd26622fb542116bb5254d5
         with:

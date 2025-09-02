@@ -94,7 +94,7 @@ jobs:
           cmake --version
 
           echo 'Checking compiler version.'
-          ${CC}
+          ${CC} --version
 
           echo 'Checking Conan version.'
           conan --version
